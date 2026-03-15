@@ -1,0 +1,207 @@
+{
+  "_instructions": {
+    "adding_a_post": "1) Add an entry to posts[] below. 2) Drop the .html file in /posts/. Done — card appears automatically.",
+    "contact_form":  "Sign up free at formspree.io, create a form, paste the endpoint URL into formspreeEndpoint below.",
+    "photo":         "Place photo.jpg (portrait, min 800x1000px) in the root folder alongside index.html."
+  },
+
+  "meta": {
+    "siteTitle":    "Yashasvi Shukla — Senior AI Engineer",
+    "tagline":      "AI Engineer & Writer",
+    "description":  "Senior AI Engineer specialising in Generative AI, RAG pipelines, LLM agents, and AI systems that work in production.",
+    "siteUrl":      "https://yashasvi-shukla.github.io",
+    "faviconEmoji": "🤖",
+    "copyrightYear": 2025,
+    "ogImage":      "og-image.jpg"
+  },
+
+  "personal": {
+    "name":        "Yashasvi Shukla",
+    "firstName":   "Yashasvi",
+    "role":        "Senior AI Engineer",
+    "location":    "India",
+    "photo":       "myphoto.jpg",
+    "email":       "yashasvi.k.shukla@gmail.com",
+    "phone":       "+91 82868 04182",
+    "linkedin":    "https://linkedin.com/in/yashasvi--shukla",
+    "github":      "https://github.com/yashasvi-shukl",
+    "medium":      "https://medium.com/@yashasvi.k.shukla",
+    "resumePdf":   "resume.pdf",
+    "availability":"Open to remote collaborations · English & Hindi"
+  },
+
+  "home": {
+    "eyebrow":    "Senior AI Engineer · India",
+    "headline":   ["Building AI", "That Works", "In Production."],
+    "subheadline":"Senior AI Engineer crafting <strong>RAG pipelines</strong>, <strong>LLM agents</strong>, and intelligent search systems for enterprise at scale.",
+    "featuredPostCount": 3
+  },
+
+  "about": {
+    "bio": [
+      "I'm a <strong>Senior AI Engineer at Zensar Technologies</strong> with 6+ years of experience building production-grade Generative AI systems — RAG pipelines, LLM agents, intelligent search, and everything in between.",
+      "I've led end-to-end AI delivery across <strong>aviation, telecom, and BFSI</strong> sectors, working with teams to turn complex retrieval and reasoning problems into reliable, scalable systems that actually ship.",
+      "I'm currently exploring the frontier of <strong>agentic AI</strong> — multi-agent orchestration, Google ADK, MCP and A2A protocols — and writing about what I learn along the way."
+    ]
+  },
+
+  "stats": [
+    { "value": "6+",  "label": "Years in AI"    },
+    { "value": "10+", "label": "Projects Delivered"  },
+    { "value": "3",   "label": "Awards Won"      },
+    { "value": "∞",   "label": "Always Learning" }
+  ],
+
+  "experience": [
+    {
+      "role":        "Senior AI Engineer",
+      "company":     "Zensar Technologies",
+      "period":      "Feb 2024 – Present",
+      "current":     true,
+      "description": "Leading design and delivery of Generative AI solutions across aviation, telecom, and BFSI. End-to-end ownership from scoping to production deployment."
+    },
+    {
+      "role":        "Senior Data Scientist",
+      "company":     "Wipro Limited",
+      "period":      "Jul 2022 – Feb 2024",
+      "current":     false,
+      "description": "Led a team of 3 data scientists. Built GenAI POCs, customer support chatbots, and multi-stage intent classification systems."
+    },
+    {
+      "role":        "Data Scientist",
+      "company":     "Infosys Limited",
+      "period":      "Jun 2019 – Jul 2022",
+      "current":     false,
+      "description": "NLP, sentiment analysis, incident routing automation, and ML models across healthcare and financial domains."
+    }
+  ],
+
+  "education": [
+    {
+      "degree": "PGD in AI & Machine Learning",
+      "school": "University of Hyderabad",
+      "period": "2021 – 2022",
+      "note":   "Distinction"
+    },
+    {
+      "degree": "B.Sc. Computer Science",
+      "school": "Mumbai University",
+      "period": "2016 – 2019",
+      "note":   "CGPA 8.4"
+    }
+  ],
+
+  "skills": [
+    {
+      "category": "Generative AI & LLMs",
+      "items": ["GPT-4o / OpenAI API","Claude (Anthropic)","Gemini 1.5","LLaMA 3 / Mistral","Amazon Bedrock","Prompt Engineering","Few-shot & Chain-of-Thought","AI Agents","Google ADK","A2A Protocol","MCP (Model Context Protocol)","Tool Use / Function Calling","Multi-agent Orchestration"]
+    },
+    {
+      "category": "RAG & Information Retrieval",
+      "items": ["RAG / GraphRAG","Agentic RAG","Hybrid Search","Semantic Search","Inverted Index","BM25","Parent-Child Chunking","Cross-encoder Re-ranking","Query Expansion / Multi-Query","HyDE","LangChain / LangGraph","LlamaIndex"]
+    },
+    {
+      "category": "Vector Databases & Storage",
+      "items": ["Milvus","ChromaDB","PGVector","Weaviate","Pinecone","Amazon Kendra","Neo4j","MongoDB","AWS S3 / Athena"]
+    },
+    {
+      "category": "LLM Ops & Observability",
+      "items": ["Arize AI","WhyLabs","Datadog LLM Observability","Guardrails.ai","LlamaGuard","RAGAS","LLM-as-a-Judge","Hallucination Detection","Prompt Injection Defense"]
+    },
+    {
+      "category": "ML & Data Science",
+      "items": ["Transformers / Hugging Face","BERT / RoBERTa","XGBoost / Scikit-learn","LSTM / BiLSTM","Explainable AI (SHAP)","Python","SQL","Pandas / NumPy","NLTK / Gensim"]
+    },
+    {
+      "category": "Cloud & Infrastructure",
+      "items": ["AWS SageMaker","Vertex AI","Google Cloud Platform","Azure OpenAI","FastAPI","Streamlit","Tesseract OCR","Docker","GitHub / Bitbucket"]
+    }
+  ],
+
+  "awards": [
+    { "icon": "🏆", "name": "Outstanding Achievement Award", "org": "Zensar Technologies" },
+    { "icon": "🌟", "name": "Rookie of the Quarter",         "org": "Wipro Limited"                       },
+    { "icon": "⚡", "name": "INSTA Award",                   "org": "Infosys Limited"                     }
+  ],
+
+  "contact": {
+    "intro": "Building something interesting? Thinking through an AI system? Want to collaborate or just talk shop? I'm always up for a good conversation.",
+    "formspreeEndpoint": "",
+    "availability": "Currently open to remote collaborations and consulting. Response time: within 48 hours."
+  },
+
+  "marquee": [
+    "GPT-4o","RAG","LangChain","Milvus","Claude","LlamaIndex",
+    "Gemini","Hybrid Search","LangGraph","Arize AI","Google ADK",
+    "MCP","A2A Protocol","Guardrails","RAGAS","Vertex AI",
+    "Agentic RAG","Weaviate","HyDE","FastAPI","Transformers",
+    "Pinecone","BM25","Multi-Query","SHAP","Neo4j"
+  ],
+
+  "posts": [
+    {
+      "id": "recursive-language-models",
+      "title": "Recursive Language Models: The Architecture of Infinite Thought",
+      "excerpt": "How AI broke the context barrier — from tree-shaped neural networks of the 2010s to the agent scaffolds processing ten million tokens today.",
+      "tag": "AI Architecture",
+      "date": "Feb 24, 2026",
+      "readTime": "18 min",
+      "featured": true,
+      "file": "posts/recursive-language-models-blog.html"
+    },
+    {
+      "id": "parent-child-chunking",
+      "title": "Parent-Child Chunking: The RAG Pattern Nobody Talks About Enough",
+      "excerpt": "Standard chunking breaks context. Parent-child chunking preserves it — giving you retrieval precision and generation context at the same time.",
+      "tag": "RAG", 
+      "date": "Feb 18, 2025", 
+      "readTime": "7 min", 
+      "featured": true,
+      "file": "posts/parent-child-chunking.html"
+    },
+    {
+      "id": "inverted-index",
+      "title": "Inverted Index vs BM25: When You Need Custom Keyword Search",
+      "excerpt": "BM25 doesn't understand logical AND/OR. Here's how an inverted index with a logical query parser gives you search that actually behaves.",
+      "tag": "Search", 
+      "date": "Feb 5, 2025", 
+      "readTime": "8 min", 
+      "featured": true,
+      "file": "posts/inverted-index.html"
+    },
+    {
+      "id": "hybrid-search",
+      "title": "Dense vs Sparse vs Hybrid: Choosing the Right Retrieval Strategy",
+      "excerpt": "Every RAG system faces this question. A practical breakdown of when each approach wins — and how to combine them without killing latency.",
+      "tag": "RAG", 
+      "date": "Jan 22, 2025", 
+      "readTime": "9 min", 
+      "featured": true,
+      "file": "posts/hybrid-search.html"
+    },
+    {
+      "id": "hallucination-detection",
+      "title": "LLM-as-a-Judge: Grading Your RAG Responses for Hallucinations",
+      "excerpt": "Using a language model to evaluate another sounds circular. Done right, it's one of the most practical tools for keeping production RAG honest.",
+      "tag": "LLM Ops", 
+      "date": "Jan 10, 2025", 
+      "readTime": "6 min", 
+      "featured": false,
+      "file": "posts/hallucination-detection.html"
+    },
+    {
+      "id": "query-enhancement",
+      "title": "Query Expansion and Multi-Query: Getting More From Your Retriever",
+      "excerpt": "A single user query is rarely the best retrieval signal. Here's how query expansion, multi-query generation, and HyDE can dramatically improve recall.",
+      "tag": "RAG", "date": "Dec 28, 2024", "readTime": "7 min", "featured": false,
+      "file": "posts/query-enhancement.html"
+    },
+    {
+      "id": "llm-monitoring",
+      "title": "LLM Monitoring in Production: What I Learned the Hard Way",
+      "excerpt": "Deploying RAG without observability is flying blind. Here's what to track, which tools I've found useful, and what actually matters.",
+      "tag": "LLM Ops", "date": "Dec 12, 2024", "readTime": "6 min", "featured": false,
+      "file": "posts/llm-monitoring.html"
+    }
+  ]
+}

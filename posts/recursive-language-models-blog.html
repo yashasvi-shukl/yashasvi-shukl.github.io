@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recursive Language Models: The Architecture of Infinite Thought</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f0d0a;
+      --parchment: #faf8f3;
+      --cream: #f4f0e8;
+      --gold: #c9a84c;
+      --gold-light: #e8d49a;
+      --rust: #b84a2e;
+      --teal: #1a6b6b;
+      --teal-light: #e8f4f4;
+      --muted: #6b6460;
+      --border: #ddd8ce;
+      --code-bg: #1a1814;
+      --code-text: #e8d49a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background-color: var(--parchment);
+      color: var(--ink);
+      line-height: 1.85;
+      font-size: 19px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--ink);
+      color: var(--parchment);
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .header-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      min-height: 520px;
+    }
+
+    .header-text {
+      padding: 64px 60px 64px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .header-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      line-height: 1.08;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+    }
+
+    h1 em { color: var(--gold); font-style: italic; }
+
+    .header-sub {
+      font-size: 18px;
+      color: #c8c0b0;
+      line-height: 1.6;
+      max-width: 480px;
+      font-weight: 300;
+    }
+
+    .header-meta {
+      margin-top: 36px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .header-meta .chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 2px;
+    }
+
+    .header-meta .read-time {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .header-visual {
+      background: linear-gradient(135deg, #1a1814 0%, #0f0d0a 100%);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animated tree visualization */
+    .tree-svg-container {
+      width: 380px;
+      height: 420px;
+      position: relative;
+    }
+
+    .tree-svg-container svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── TABLE OF CONTENTS ── */
+    .toc-bar {
+      background: var(--ink);
+      border-top: 1px solid #2a2720;
+      padding: 16px 80px;
+      display: flex;
+      gap: 32px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .toc-bar::-webkit-scrollbar { display: none; }
+
+    .toc-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color .2s;
+    }
+
+    .toc-item:hover { color: var(--gold); }
+
+    .toc-item span {
+      color: var(--gold);
+      margin-right: 6px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .content-wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 72px 40px 120px;
+    }
+
+    /* ── LEAD ── */
+    .lead {
+      font-size: 22px;
+      line-height: 1.7;
+      color: #2a2420;
+      font-style: italic;
+      font-weight: 300;
+      border-left: 4px solid var(--gold);
+      padding-left: 28px;
+      margin-bottom: 56px;
+    }
+
+    /* ── SECTION HEADINGS ── */
+    .section-anchor {
+      display: block;
+      margin-top: 72px;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 38px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -.5px;
+      color: var(--ink);
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 3px;
+      background: var(--gold);
+      margin-top: 14px;
+    }
+
+    h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      margin-top: 48px;
+      margin-bottom: 16px;
+      color: var(--ink);
+    }
+
+    h4 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-top: 32px;
+      margin-bottom: 12px;
+    }
+
+    p { margin-bottom: 24px; }
+
+    /* ── CALLOUT BOXES ── */
+    .callout {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--teal);
+      border-radius: 0 4px 4px 0;
+      padding: 24px 28px;
+      margin: 36px 0;
+    }
+
+    .callout.gold {
+      border-left-color: var(--gold);
+      background: #fdfaf0;
+    }
+
+    .callout.rust {
+      border-left-color: var(--rust);
+      background: #fdf5f3;
+    }
+
+    .callout-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .callout.gold .callout-label { color: var(--gold); }
+    .callout.rust .callout-label { color: var(--rust); }
+
+    .callout p { margin-bottom: 0; font-size: 17px; }
+
+    /* ── CODE BLOCKS ── */
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.65;
+      padding: 28px 32px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 32px 0;
+      position: relative;
+    }
+
+    pre .label {
+      position: absolute;
+      top: 10px;
+      right: 16px;
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      background: #ede8df;
+      padding: 2px 7px;
+      border-radius: 3px;
+      color: var(--rust);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    .kw { color: #8fcfcf; }
+    .fn { color: #e8c47a; }
+    .str { color: #98c992; }
+    .cm { color: #5a6060; font-style: italic; }
+    .num { color: #d19a66; }
+    .cls { color: #e5c07b; }
+
+    /* ── MERMAID DIAGRAMS ── */
+    .diagram-wrap {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 32px;
+      margin: 36px 0;
+      overflow-x: auto;
+    }
+
+    .diagram-caption {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 16px;
+      font-style: italic;
+    }
+
+    /* ── COMPARISON TABLE ── */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 36px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    thead tr {
+      background: var(--ink);
+      color: var(--parchment);
+    }
+
+    thead th {
+      padding: 14px 20px;
+      text-align: left;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    tbody tr:nth-child(odd) { background: #fff; }
+    tbody tr:nth-child(even) { background: var(--cream); }
+
+    tbody td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    tbody td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--teal);
+      white-space: nowrap;
+    }
+
+    .good { color: #2a7a3a; font-weight: 600; }
+    .bad { color: var(--rust); font-weight: 600; }
+
+    /* ── MATH FORMULA ── */
+    .formula-box {
+      background: #0f0d0a;
+      color: #e8d49a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      text-align: center;
+      padding: 32px 40px;
+      border-radius: 6px;
+      margin: 32px 0;
+      letter-spacing: .5px;
+    }
+
+    .formula-box .formula-label {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .formula-box .formula-note {
+      font-size: 12px;
+      color: #7a7060;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── PULL QUOTE ── */
+    .pull-quote {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      font-style: italic;
+      line-height: 1.4;
+      color: var(--ink);
+      text-align: center;
+      padding: 48px 32px;
+      margin: 56px 0;
+      position: relative;
+    }
+
+    .pull-quote::before,
+    .pull-quote::after {
+      content: '';
+      display: block;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .pull-quote::before { margin-bottom: 32px; }
+    .pull-quote::after { margin-top: 32px; }
+
+    /* ── GENERATION CARDS ── */
+    .gen-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 36px 0;
+    }
+
+    .gen-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .gen-card-head {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .gen-card-head.g1 { background: #2a2420; color: var(--parchment); }
+    .gen-card-head.g2 { background: var(--teal); color: white; }
+
+    .gen-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: .7;
+    }
+
+    .gen-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .gen-card-body {
+      padding: 20px 24px;
+      background: #fff;
+    }
+
+    .gen-card-body p { font-size: 15px; margin-bottom: 12px; }
+    .gen-card-body ul { padding-left: 20px; font-size: 15px; }
+    .gen-card-body li { margin-bottom: 6px; line-height: 1.5; }
+    .gen-card-body li.pro { color: #2a7a3a; }
+    .gen-card-body li.con { color: var(--rust); }
+
+    /* ── USE CASE CARDS ── */
+    .use-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 36px 0;
+    }
+
+    .use-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .use-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .use-card:nth-child(1)::before { background: var(--teal); }
+    .use-card:nth-child(2)::before { background: var(--gold); }
+    .use-card:nth-child(3)::before { background: var(--rust); }
+    .use-card:nth-child(4)::before { background: #6a4cba; }
+
+    .use-icon {
+      font-size: 28px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .use-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .use-desc { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+    /* ── CHALLENGE BADGE ── */
+    .challenges {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 36px 0;
+    }
+
+    .ch-card {
+      text-align: center;
+      padding: 28px 20px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .ch-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+
+    .ch-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--rust);
+      margin-bottom: 8px;
+    }
+
+    .ch-desc { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      color: #888;
+      padding: 48px 80px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    footer a { color: var(--gold); text-decoration: none; }
+
+    .footer-refs {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 40px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-refs h3 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .ref-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .ref-list li {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      padding-left: 24px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .ref-list li::before {
+      content: attr(data-n);
+      position: absolute;
+      left: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--gold);
+      top: 2px;
+    }
+
+    .ref-list a { color: var(--teal); text-decoration: none; word-break: break-all; }
+
+    /* ── HIGHLIGHT ── */
+    mark {
+      background: linear-gradient(120deg, #fde9a0 0%, #fde9a0 100%);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .header-grid { grid-template-columns: 1fr; }
+      .header-visual { display: none; }
+      .header-text { padding: 48px 32px; }
+      h1 { font-size: 40px; }
+      .content-wrap { padding: 48px 24px; }
+      .gen-grid, .use-grid { grid-template-columns: 1fr; }
+      .challenges { grid-template-columns: 1fr; }
+      .toc-bar { padding: 16px 24px; }
+      footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ── STEP WALKTHROUGH ── */
+    .steps {
+      counter-reset: step;
+      margin: 36px 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 28px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      counter-increment: step;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      background: var(--teal);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .step-content { flex: 1; }
+
+    .step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .step-desc { font-size: 16px; color: var(--muted); line-height: 1.6; }
+
+    /* mermaid override */
+    .mermaid { text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ HEADER ═══ -->
+<header>
+  <div class="header-grid">
+    <div class="header-text">
+      <div class="header-eyebrow">Deep Dive · AI Architecture · 2025/2026</div>
+      <h1>Recursive<br>Language<br><em>Models</em></h1>
+      <p class="header-sub">How AI broke the context barrier — from tree-shaped neural networks of the 2010s to the agent scaffolds processing ten million tokens today.</p>
+      <div class="header-meta">
+        <span class="chip">TECHNICAL</span>
+        <span class="chip">BEGINNER-FRIENDLY</span>
+        <span class="read-time">~ 18 min read</span>
+      </div>
+    </div>
+
+    <!-- Inline SVG tree animation -->
+    <div class="header-visual">
+      <div class="tree-svg-container">
+        <svg viewBox="0 0 380 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .node { animation: pulse 2.5s ease-in-out infinite; }
+            .node:nth-child(2) { animation-delay: .3s; }
+            .node:nth-child(3) { animation-delay: .6s; }
+            .node:nth-child(4) { animation-delay: .9s; }
+            .node:nth-child(5) { animation-delay: 1.2s; }
+            .node:nth-child(6) { animation-delay: 1.5s; }
+            .node:nth-child(7) { animation-delay: 1.8s; }
+            @keyframes pulse {
+              0%,100% { opacity: .6; }
+              50% { opacity: 1; }
+            }
+            .edge { animation: draw 3s ease-in-out infinite; stroke-dasharray: 200; stroke-dashoffset: 200; }
+            .edge:nth-child(2) { animation-delay: .5s; }
+            .edge:nth-child(3) { animation-delay: 1s; }
+            .edge:nth-child(4) { animation-delay: 1.5s; }
+            @keyframes draw {
+              to { stroke-dashoffset: 0; }
+            }
+          </style>
+
+          <!-- Edges -->
+          <line x1="190" y1="60" x2="100" y2="160" stroke="#c9a84c" stroke-width="1.5" opacity=".4"/>
+          <line x1="190" y1="60" x2="280" y2="160" stroke="#c9a84c" stroke-width="1.5" opacity=".4"/>
+          <line x1="100" y1="160" x2="56" y2="260" stroke="#c9a84c" stroke-width="1.5" opacity=".3"/>
+          <line x1="100" y1="160" x2="144" y2="260" stroke="#c9a84c" stroke-width="1.5" opacity=".3"/>
+          <line x1="280" y1="160" x2="236" y2="260" stroke="#c9a84c" stroke-width="1.5" opacity=".3"/>
+          <line x1="280" y1="160" x2="324" y2="260" stroke="#c9a84c" stroke-width="1.5" opacity=".3"/>
+          <line x1="56" y1="260" x2="34" y2="350" stroke="#c9a84c" stroke-width="1" opacity=".2"/>
+          <line x1="56" y1="260" x2="78" y2="350" stroke="#c9a84c" stroke-width="1" opacity=".2"/>
+          <line x1="144" y1="260" x2="122" y2="350" stroke="#c9a84c" stroke-width="1" opacity=".2"/>
+          <line x1="144" y1="260" x2="166" y2="350" stroke="#c9a84c" stroke-width="1" opacity=".2"/>
+
+          <!-- Root node -->
+          <g class="node">
+            <circle cx="190" cy="60" r="26" fill="#c9a84c" opacity=".9"/>
+            <text x="190" y="55" text-anchor="middle" fill="#0f0d0a" font-family="JetBrains Mono" font-size="8" font-weight="600">ROOT</text>
+            <text x="190" y="66" text-anchor="middle" fill="#0f0d0a" font-family="JetBrains Mono" font-size="7">LLM</text>
+          </g>
+
+          <!-- Layer 1 -->
+          <g class="node">
+            <circle cx="100" cy="160" r="22" fill="#1a6b6b" opacity=".85"/>
+            <text x="100" y="155" text-anchor="middle" fill="white" font-family="JetBrains Mono" font-size="7">PLAN</text>
+            <text x="100" y="166" text-anchor="middle" fill="white" font-family="JetBrains Mono" font-size="7">CH 1–5</text>
+          </g>
+          <g class="node">
+            <circle cx="280" cy="160" r="22" fill="#1a6b6b" opacity=".85"/>
+            <text x="280" y="155" text-anchor="middle" fill="white" font-family="JetBrains Mono" font-size="7">PLAN</text>
+            <text x="280" y="166" text-anchor="middle" fill="white" font-family="JetBrains Mono" font-size="7">CH 6–10</text>
+          </g>
+
+          <!-- Layer 2 -->
+          <g class="node">
+            <circle cx="56" cy="260" r="18" fill="#2a3a4a" opacity=".8"/>
+            <text x="56" y="257" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">SUM</text>
+            <text x="56" y="267" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">CH1</text>
+          </g>
+          <g class="node">
+            <circle cx="144" cy="260" r="18" fill="#2a3a4a" opacity=".8"/>
+            <text x="144" y="257" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">SUM</text>
+            <text x="144" y="267" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">CH2</text>
+          </g>
+          <g class="node">
+            <circle cx="236" cy="260" r="18" fill="#2a3a4a" opacity=".8"/>
+            <text x="236" y="257" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">SUM</text>
+            <text x="236" y="267" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">CH6</text>
+          </g>
+          <g class="node">
+            <circle cx="324" cy="260" r="18" fill="#2a3a4a" opacity=".8"/>
+            <text x="324" y="257" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">SUM</text>
+            <text x="324" y="267" text-anchor="middle" fill="#e8d49a" font-family="JetBrains Mono" font-size="7">CH7</text>
+          </g>
+
+          <!-- Leaf layer (smaller) -->
+          <circle cx="34" cy="350" r="10" fill="#3a3028" opacity=".6"/>
+          <text x="34" y="353" text-anchor="middle" fill="#888" font-family="JetBrains Mono" font-size="6">leaf</text>
+          <circle cx="78" cy="350" r="10" fill="#3a3028" opacity=".6"/>
+          <text x="78" y="353" text-anchor="middle" fill="#888" font-family="JetBrains Mono" font-size="6">leaf</text>
+          <circle cx="122" cy="350" r="10" fill="#3a3028" opacity=".6"/>
+          <text x="122" y="353" text-anchor="middle" fill="#888" font-family="JetBrains Mono" font-size="6">leaf</text>
+          <circle cx="166" cy="350" r="10" fill="#3a3028" opacity=".6"/>
+          <text x="166" y="353" text-anchor="middle" fill="#888" font-family="JetBrains Mono" font-size="6">leaf</text>
+
+          <!-- Label -->
+          <text x="190" y="406" text-anchor="middle" fill="#3a3028" font-family="JetBrains Mono" font-size="9" letter-spacing="2">RECURSIVE CALL TREE</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <nav class="toc-bar">
+    <a class="toc-item" href="#context-rot"><span>01</span>The Context Rot Problem</a>
+    <a class="toc-item" href="#history"><span>02</span>History of Recursion in AI</a>
+    <a class="toc-item" href="#rvnn"><span>03</span>RvNNs &amp; The Math</a>
+    <a class="toc-item" href="#modern"><span>04</span>Modern RLM Architecture</a>
+    <a class="toc-item" href="#walkthrough"><span>05</span>Step-by-Step Walkthrough</a>
+    <a class="toc-item" href="#reasoning"><span>06</span>Reasoning Synergy</a>
+    <a class="toc-item" href="#comparison"><span>07</span>RLM vs Long-Context</a>
+    <a class="toc-item" href="#usecases"><span>08</span>Real-World Applications</a>
+    <a class="toc-item" href="#challenges"><span>09</span>Challenges</a>
+    <a class="toc-item" href="#future"><span>10</span>The Future</a>
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════════════════ BODY ═══ -->
+<main class="content-wrap">
+
+  <p class="lead">
+    Imagine handing a librarian ten million pages and asking, "What are the recurring legal conflicts across this entire archive?" A human would never try to hold all of it in mind at once — they would build a system. Recursive Language Models are exactly that: a <em>system for thinking at scale</em>.
+  </p>
+
+  <!-- ════ SECTION 1 ════ -->
+  <a class="section-anchor" id="context-rot"></a>
+  <h2>01 · The Context Rot Problem</h2>
+
+  <p>
+    Every modern AI language model — GPT-4, Claude, Gemini — reads text through what's called a <strong>context window</strong>. Think of it as the model's working memory: all the tokens it can "see" at once while forming a response. For years, engineers raced to make these windows larger: 8K tokens, 32K, 128K, 1M.
+  </p>
+
+  <p>
+    But a disturbing pattern emerged. Simply making the window bigger didn't make the model smarter. Accuracy degraded. The model would "forget" key details from the middle of a long document. This phenomenon has a name:
+  </p>
+
+  <div class="callout rust">
+    <span class="callout-label">⚠ Key Concept</span>
+    <p><strong>Context Rot</strong> — the progressive degradation of reasoning quality as input length grows. Attention scores become diluted across too many tokens, causing the model to "lose track" of information buried in the middle of a long document. Benchmarks show accuracy can drop 20–40% on needle-in-a-haystack tasks beyond 100K tokens.</p>
+  </div>
+
+  <p>
+    The problem has three compounding causes:
+  </p>
+
+  <p><strong>1. Attention dilution.</strong> The transformer's attention mechanism must distribute its "budget" across every pair of tokens. In a 1M-token window, every token competes with a million others. The signal-to-noise ratio collapses.</p>
+
+  <p><strong>2. Quadratic compute cost.</strong> Standard attention scales as <code>O(n²)</code> with sequence length. Doubling the context quadruples the compute. Processing 10M tokens naively would be economically catastrophic.</p>
+
+  <p><strong>3. Position encoding decay.</strong> Models learn positional embeddings over finite training examples. When pushed far beyond their training distribution, they lose their sense of "where" in the document they are.</p>
+
+  <div class="callout gold">
+    <span class="callout-label">💡 Analogy for Students</span>
+    <p>Imagine you are studying for an exam by reading a 500-page textbook in one sitting, without notes. You'll remember the first chapter and the last chapter, but everything in the middle becomes a blur. A recursive approach is like a student who creates chapter summaries, then summaries-of-summaries — building a hierarchy of understanding rather than brute-forcing their memory.</p>
+  </div>
+
+  <!-- ════ SECTION 2 ════ -->
+  <a class="section-anchor" id="history"></a>
+  <h2>02 · A Brief History of Recursion in AI</h2>
+
+  <p>
+    Recursion in AI did not begin with the LLM era. It has a rich lineage, and understanding that lineage illuminates why today's solutions are designed the way they are.
+  </p>
+
+  <div class="gen-grid">
+    <div class="gen-card">
+      <div class="gen-card-head g1">
+        <div>
+          <div class="gen-tag">Generation 1 · 2010s</div>
+          <div class="gen-title">Recursive Neural Networks (RvNNs)</div>
+        </div>
+      </div>
+      <div class="gen-card-body">
+        <p>Hard-coded recursive structure. The network mirrored a sentence's parse tree — combining word vectors bottom-up according to grammar rules.</p>
+        <ul>
+          <li class="pro">✓ Captured hierarchical structure natively</li>
+          <li class="pro">✓ Composable, interpretable representations</li>
+          <li class="con">✗ Required perfect parse trees</li>
+          <li class="con">✗ Sequential — couldn't be parallelized on GPUs</li>
+          <li class="con">✗ Brittle to real-world noisy language</li>
+        </ul>
+      </div>
+    </div>
+    <div class="gen-card">
+      <div class="gen-card-head g2">
+        <div>
+          <div class="gen-tag">Generation 2 · 2024+</div>
+          <div class="gen-title">Recursive LM Scaffolds (RLMs)</div>
+        </div>
+      </div>
+      <div class="gen-card-body">
+        <p>No new architecture. Recursion is a <em>strategy</em> — a wrapper around existing transformers that lets them call themselves on sub-tasks via a runtime environment.</p>
+        <ul>
+          <li class="pro">✓ Works with any base LLM</li>
+          <li class="pro">✓ Truly unbounded input (10M+ tokens)</li>
+          <li class="pro">✓ Highly parallelizable sub-calls</li>
+          <li class="con">✗ Latency overhead from multiple calls</li>
+          <li class="con">✗ Requires a robust runtime/scheduler</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The transition between generations is the story of shifting <em>where</em> recursion lives — from inside the network weights to outside, in the orchestration logic.</p>
+
+  <!-- ════ SECTION 3 ════ -->
+  <a class="section-anchor" id="rvnn"></a>
+  <h2>03 · Generation 1: The Tree Brain (RvNNs &amp; the Math)</h2>
+
+  <p>
+    Stanford's Richard Socher and Christopher Manning pioneered Recursive Neural Networks in the early 2010s. Their key insight: <mark>language has structure, and that structure is a tree</mark>. Instead of reading left-to-right like a sequence model, why not read bottom-up, like a grammar diagram?
+  </p>
+
+  <h3>The Parse Tree Idea</h3>
+
+  <p>Consider the sentence: <em>"The cat sat on the mat."</em> A linguist would diagram this as a hierarchy: "The" + "cat" → Noun Phrase → Noun Phrase + "sat" → Verb Phrase → full Sentence. An RvNN literally implements this computation.</p>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+graph TD
+    S["S (Sentence)"]:::root
+    NP1["NP (Noun Phrase)"]:::mid
+    VP["VP (Verb Phrase)"]:::mid
+    DT["Det: The"]:::leaf
+    NN["Noun: cat"]:::leaf
+    VBD["Verb: sat"]:::leaf
+    PP["PP (Prep Phrase)"]:::mid
+    IN["Prep: on"]:::leaf
+    NP2["NP (Noun Phrase)"]:::mid
+    DT2["Det: the"]:::leaf
+    NN2["Noun: mat"]:::leaf
+
+    S --> NP1
+    S --> VP
+    NP1 --> DT
+    NP1 --> NN
+    VP --> VBD
+    VP --> PP
+    PP --> IN
+    PP --> NP2
+    NP2 --> DT2
+    NP2 --> NN2
+
+    classDef root fill:#c9a84c,stroke:none,color:#0f0d0a,font-weight:bold
+    classDef mid fill:#1a6b6b,stroke:none,color:white
+    classDef leaf fill:#2a2420,stroke:none,color:#e8d49a
+    </div>
+    <p class="diagram-caption">Figure 1: A parse tree for "The cat sat on the mat." Each node is computed bottom-up by the RvNN's composition function.</p>
+  </div>
+
+  <h3>The Composition Function</h3>
+
+  <p>
+    At every internal node, the RvNN applies the same learned transformation to combine two child vectors into one parent vector. Here's the core math in three flavors:
+  </p>
+
+  <div class="formula-box">
+    <span class="formula-label">Standard RvNN · Composition Function</span>
+    x_parent = tanh( W_left · x_left  +  W_right · x_right  +  b )
+    <div class="formula-note">
+      W_left, W_right : learned weight matrices (same weights reused everywhere in the tree)<br>
+      x_left, x_right : child node vectors (e.g., embeddings of "very" and "good")<br>
+      b : bias vector &nbsp;&nbsp;|&nbsp;&nbsp; tanh : non-linear activation to bound outputs
+    </div>
+  </div>
+
+  <p>
+    The key property: <strong>weight sharing</strong>. The same matrices <code>W_left</code> and <code>W_right</code> are reused at every node in every tree. This makes the model generalizable — it learns universal rules of composition, not sentence-specific patterns.
+  </p>
+
+  <h3>The RNTN: Handling Negation</h3>
+
+  <p>
+    The standard formulation had a flaw: it couldn't capture interactions between children. "not" + "good" should flip sentiment, but a purely additive combination can't model this flip. Socher's Recursive Neural Tensor Network (RNTN) solved this with a quadratic term:
+  </p>
+
+  <div class="formula-box">
+    <span class="formula-label">RNTN · Tensor Composition Function</span>
+    x_parent = f( x^T · T^[1:d] · x  +  W · x  +  b )
+    <div class="formula-note">
+      T^[1:d] : a 3D tensor — one slice per output dimension — captures multiplicative interactions between children<br>
+      x = [x_left; x_right] : children concatenated into one vector<br>
+      This allows "not" × "good" to produce a negative output, something additive models cannot do
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="callout-label">📊 Result</span>
+    <p>On the Stanford Sentiment Treebank (SST), the RNTN achieved 85.4% fine-grained accuracy — a significant improvement over bag-of-words models (about 67%) precisely because it could track negation like "not very bad = good" through the tree structure.</p>
+  </div>
+
+  <h3>Training: Backpropagation Through Structure</h3>
+
+  <p>
+    Training these networks required a variant of backpropagation called <strong>Backpropagation Through Structure (BPTS)</strong>. The forward pass builds the tree bottom-up; the backward pass sends gradients from root back down to every leaf. Because every sentence has a unique tree shape, batching was extremely difficult — this was RvNNs' Achilles heel for large-scale training.
+  </p>
+
+  <p>
+    In 2017, the Transformer architecture swept RvNNs aside. Its parallel self-attention could process entire sequences at once on GPUs, training on internet-scale data. But it discarded the tree structure entirely — and thereby reintroduced the scale problem that RvNNs were built to solve.
+  </p>
+
+  <div class="pull-quote">
+    "Transformers won the battle of training efficiency. RLMs are winning the war of inference scale."
+  </div>
+
+  <!-- ════ SECTION 4 ════ -->
+  <a class="section-anchor" id="modern"></a>
+  <h2>04 · Generation 2: The Modern RLM Architecture</h2>
+
+  <p>
+    A modern Recursive Language Model is not a new neural architecture. It is a <strong>runtime pattern</strong> — a way of orchestrating a standard transformer so that it can call itself on sub-problems. The foundational paper from MIT CSAIL (December 2024) and the practical implementation from Prime Intellect's RLMEnv describe this pattern in detail.
+  </p>
+
+  <h3>The Four Core Components</h3>
+
+  <h4>1. The Environment — The Bookshelf</h4>
+  <p>
+    In a standard LLM call, you paste the text into the prompt. At 10M tokens, this is impossible. Instead, the RLM runtime stores the massive document <strong>outside</strong> the model in a Python variable or external store. The model never "sees" the full document — it only retrieves specific slices when it needs them, exactly like a programmer querying a database.
+  </p>
+
+<pre><code><span class="cm"># The document lives OUTSIDE the model's context</span>
+P = load_document(<span class="str">"1000_page_report.pdf"</span>)  <span class="cm"># 8.2 million tokens</span>
+env = RLMEnvironment(data=P)
+
+<span class="cm"># Model can ask for specific slices via code execution</span>
+relevant_chunks = env.query(<span class="str">"inflation rates 2020–2024"</span>)
+<span class="cm"># Returns: only the 3,200 relevant tokens</span>
+<span class="label">PYTHON · ENVIRONMENT PATTERN</span></code></pre>
+
+  <h4>2. The REPL — The Workspace</h4>
+  <p>
+    REPL stands for <em>Read-Eval-Print Loop</em> — a persistent Python execution sandbox. Instead of reading every token, the model writes code to extract what it needs. This is radically more efficient: a <code>grep</code> or a semantic search across 10M tokens finds the needle without reading the haystack.
+  </p>
+
+<pre><code><span class="cm"># Model writes this in the REPL — it doesn't read the full document</span>
+<span class="kw">def</span> <span class="fn">find_contract_conflicts</span>(doc):
+    sections = doc.split_by_clause()
+    conflicts = []
+    <span class="kw">for</span> s <span class="kw">in</span> sections:
+        <span class="kw">if</span> <span class="fn">CALL</span>(<span class="str">"check_conflict"</span>, text=s):
+            conflicts.append(s.id)
+    <span class="kw">return</span> conflicts
+
+result = find_contract_conflicts(P)
+<span class="label">PYTHON · REPL PATTERN</span></code></pre>
+
+  <h4>3. Recursive Calls — The Call Tree</h4>
+  <p>
+    The core mechanism. When a task is too complex, the root LM emits a <code>CALL</code> instruction. The runtime spins up a new LLM instance with a fresh, small context window containing only the relevant sub-task. Results are stored as named variables. The root model continues once its sub-calls complete.
+  </p>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart TD
+    U["User Query"]:::user --> R
+
+    R["Root LM\nPlan & Orchestrate"]:::root
+
+    R --> C{Task fits\nin context?}:::decision
+
+    C -->|No — too large| S["Write Python\nDecomposition Plan"]:::code
+    S --> CA["CALL summarize\nChunk A"]:::worker
+    S --> CB["CALL summarize\nChunk B"]:::worker
+    S --> CC["CALL summarize\nChunk C"]:::worker
+
+    CA --> D1["Worker LM\nFocused Context"]:::leaf
+    CB --> D2["Worker LM\nFocused Context"]:::leaf
+    CC --> D3["Worker LM\nFocused Context"]:::leaf
+
+    D1 --> V["results[ ]\nPython Variables"]:::store
+    D2 --> V
+    D3 --> V
+
+    V --> R2["Root LM\nRead results, Synthesize"]:::root
+    R2 --> ANS["Final Answer"]:::user
+
+    C -->|Yes — small enough| ANS
+
+    classDef user fill:#c9a84c,stroke:none,color:#0f0d0a,font-weight:bold
+    classDef root fill:#1a6b6b,stroke:none,color:white,font-weight:bold
+    classDef decision fill:#e8d49a,stroke:none,color:#0f0d0a
+    classDef code fill:#3a3028,stroke:#c9a84c,stroke-width:1,color:#e8d49a
+    classDef worker fill:#b84a2e,stroke:none,color:white
+    classDef leaf fill:#4a2820,stroke:none,color:#e8c0b0
+    classDef store fill:#1a3a4a,stroke:none,color:#a0d0d0
+    </div>
+    <p class="diagram-caption">Figure 2: The complete RLM execution flow. Recursion depth can be unbounded; each worker may itself spawn sub-workers.</p>
+  </div>
+
+  <h4>4. The Root vs. Worker Split</h4>
+  <p>
+    Many production RLM systems use a <strong>two-tier agent design</strong> for cost efficiency:
+  </p>
+
+  <div class="callout">
+    <span class="callout-label">🏗 Architecture Pattern</span>
+    <p><strong>Root Model (The Planner):</strong> A large, expensive, highly capable model (e.g., GPT-4o, Claude Opus) responsible for creating the decomposition plan, orchestrating sub-calls, and synthesizing final answers. Called infrequently.<br><br>
+    <strong>Worker Model (The Executor):</strong> A smaller, faster, cheaper model (e.g., Claude Haiku, GPT-4o-mini) responsible for executing individual sub-tasks — summarizing one chunk, extracting entities from one section. Called frequently. This can reduce inference cost by 60–80%.</p>
+  </div>
+
+  <!-- ════ SECTION 5 ════ -->
+  <a class="section-anchor" id="walkthrough"></a>
+  <h2>05 · Step-by-Step Walkthrough: A Real RLM in Action</h2>
+
+  <p>
+    Let's walk through exactly what happens when you ask an RLM: <em>"What are the top three recurring legal risks in this 500-contract data room?"</em>
+  </p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Environment Initialization</div>
+        <div class="step-desc">The 500 contracts (~8 million tokens) are loaded into the environment <code>P</code>. The model receives a metadata summary: "500 files, 8.2M tokens, predominantly PDF, legal domain." It does <em>not</em> read any contract yet.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Root Planning</div>
+        <div class="step-desc">The Root LM writes a Python script: "Split contracts into 50 batches of 10. For each batch, CALL('extract_risks', batch). Store results in <code>risks[]</code>." It also decides to use a smaller worker model for these extraction sub-tasks.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Parallel Recursive Calls</div>
+        <div class="step-desc">The runtime spawns 50 Worker LM instances simultaneously (or in configurable parallel batches). Each worker receives 10 contracts (~160K tokens) — well within its context window. Each worker returns a structured list of risk categories it found.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-title">Result Aggregation</div>
+        <div class="step-desc">The 50 result sets are stored in <code>risks[0..49]</code>. A simple Python script counts frequency of each risk category across all batches. "Indemnification clause ambiguity" appears in 87% of batches; "Force majeure scope" in 64%; "Jurisdiction conflicts" in 58%.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <div class="step-title">Deep Verification (Nested Call)</div>
+        <div class="step-desc">The Root LM decides to verify the top risk. It emits a second-level CALL: "From the contracts that flagged indemnification issues, extract the specific clauses." Workers return verbatim clause snippets. Root uses these as evidence.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <div class="step-title">Synthesis &amp; Response</div>
+        <div class="step-desc">The Root LM reads only the aggregated findings (~8K tokens total) and produces a concise, cited answer with contract references, risk severity scores, and recommended actions. Total context used by Root: never exceeded 12K tokens, despite analyzing 8M+.</div>
+      </div>
+    </div>
+  </div>
+
+<pre><code><span class="cm"># Pseudocode of the Root LM's REPL execution</span>
+batches = P.split(n=<span class="num">50</span>)
+risks = []
+
+<span class="kw">for</span> batch <span class="kw">in</span> batches:
+    result = <span class="fn">CALL</span>(<span class="str">"extract_legal_risks"</span>,
+                  text=batch,
+                  model=<span class="str">"worker-small"</span>,   <span class="cm"># cheap model</span>
+                  schema=RiskSchema)
+    risks.extend(result.items)
+
+<span class="cm"># Aggregate</span>
+top_risks = <span class="fn">Counter</span>(risks).most_common(<span class="num">3</span>)
+
+<span class="cm"># Verify top risk with nested call</span>
+evidence = <span class="fn">CALL</span>(<span class="str">"extract_clauses"</span>,
+                 risk=top_risks[<span class="num">0</span>],
+                 contracts=P.filter_by_risk(top_risks[<span class="num">0</span>]))
+
+<span class="kw">return</span> <span class="fn">synthesize</span>(top_risks, evidence)
+<span class="label">PYTHON · ROOT LM EXECUTION</span></code></pre>
+
+  <!-- ════ SECTION 6 ════ -->
+  <a class="section-anchor" id="reasoning"></a>
+  <h2>06 · The Reasoning Synergy: RLMs + DeepSeek-R1</h2>
+
+  <p>
+    One of the most significant developments of 2025 is the combination of RLM scaffolds with <strong>Reinforcement Learning-trained reasoning models</strong> like DeepSeek-R1 and OpenAI's o-series.
+  </p>
+
+  <p>
+    Reasoning models are trained via RL to produce explicit chains of thought before answering. They learn to self-verify, backtrack, and reconsider. When such a model operates as the Root LM in an RLM framework, extraordinary things happen:
+  </p>
+
+  <div class="diagram-wrap">
+    <div class="mermaid">
+flowchart LR
+    A["Root Reasoning LM\n&lt;think&gt;Let me plan...&lt;/think&gt;"]:::root
+    B["Worker 1\nResult: themes found"]:::worker
+    C["Worker 2\nResult: ERROR — chunk too noisy"]:::error
+    D["Root LM Self-Corrects\n&lt;think&gt;Worker 2 failed.\nRetry with smaller chunk.&lt;/think&gt;"]:::root
+    E["Worker 2b\nRetry: cleaner result"]:::worker
+    F["Root LM Synthesizes\nFinal verified answer"]:::root
+
+    A --> B
+    A --> C
+    C --> D
+    D --> E
+    B --> F
+    E --> F
+
+    classDef root fill:#1a6b6b,stroke:none,color:white,font-weight:bold
+    classDef worker fill:#2a3a2a,stroke:none,color:#90c090
+    classDef error fill:#4a2820,stroke:#b84a2e,stroke-width:2,color:#e8c0b0
+    </div>
+    <p class="diagram-caption">Figure 3: A reasoning model as Root LM can detect sub-task failures and autonomously retry with adjusted strategies — a form of runtime error correction.</p>
+  </div>
+
+  <div class="callout gold">
+    <span class="callout-label">🔬 Key Capability: Self-Correction</span>
+    <p>When a Worker LM returns an inconsistent or low-confidence result, the Root Reasoning LM can detect this — either via explicit confidence scores, schema validation failures, or chain-of-thought anomalies — and automatically re-issue the sub-call with adjusted parameters. This mirrors how a careful human researcher would notice a suspicious source and verify it independently.</p>
+  </div>
+
+  <p>The combination produces three emergent capabilities that neither system has alone:</p>
+
+  <p><strong>Dynamic depth control.</strong> The reasoning model can decide in real-time how deep to recurse based on task complexity — simple questions get shallow trees, hard questions get deep verification chains.</p>
+
+  <p><strong>Evidence-based planning.</strong> Instead of a fixed top-down plan, the root model updates its decomposition strategy as sub-results come in. Early findings inform later queries.</p>
+
+  <p><strong>Coherent long-horizon tasks.</strong> Multi-day, multi-step agentic workflows become possible. The model maintains a persistent "scratch pad" of findings across dozens of recursive iterations.</p>
+
+  <!-- ════ SECTION 7 ════ -->
+  <a class="section-anchor" id="comparison"></a>
+  <h2>07 · RLM vs. Long-Context Transformers: The Full Comparison</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Dimension</th>
+          <th>Long-Context Transformer<br>(e.g. Gemini 1.5 Pro, GPT-4o)</th>
+          <th>Recursive Language Model<br>(RLM)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Max Input Scale</td>
+          <td>Fixed ceiling (~1–2M tokens); hard limit</td>
+          <td><span class="good">Effectively unbounded (10M+)</span>; limited only by time</td>
+        </tr>
+        <tr>
+          <td>Context Rot</td>
+          <td><span class="bad">Degrades</span> significantly beyond ~100K tokens</td>
+          <td><span class="good">Consistent</span> quality; each call uses a fresh short context</td>
+        </tr>
+        <tr>
+          <td>Memory Footprint</td>
+          <td><span class="bad">Grows quadratically</span> with context (O(n²) attention)</td>
+          <td><span class="good">Constant per call</span>; offloads data to Python environment</td>
+        </tr>
+        <tr>
+          <td>Parallelism</td>
+          <td>Sequential per token within a call</td>
+          <td><span class="good">Sub-calls run in parallel</span>; wall-clock time scales sub-linearly</td>
+        </tr>
+        <tr>
+          <td>Cost Efficiency</td>
+          <td><span class="bad">Pays for all tokens</span>, including irrelevant ones</td>
+          <td><span class="good">Pays only for retrieved slices</span>; ~40–70% cheaper for large inputs</td>
+        </tr>
+        <tr>
+          <td>Error Recovery</td>
+          <td>Single-shot; errors propagate silently</td>
+          <td><span class="good">Can retry sub-tasks</span>; errors are local and catchable</td>
+        </tr>
+        <tr>
+          <td>Setup Complexity</td>
+          <td><span class="good">Simple</span>; one API call</td>
+          <td><span class="bad">Complex</span>; requires runtime, scheduler, environment</td>
+        </tr>
+        <tr>
+          <td>Latency</td>
+          <td><span class="good">Single round-trip</span>; lower latency for short tasks</td>
+          <td><span class="bad">Multiple sequential sub-calls</span>; higher latency for large tasks</td>
+        </tr>
+        <tr>
+          <td>Best For</td>
+          <td>Summarizing a long email thread, reading one long document</td>
+          <td>Analyzing a codebase, a legal data room, a science literature corpus</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <span class="callout-label">📐 When to Choose</span>
+    <p>Use a long-context transformer when your input is under ~200K tokens and you need low latency. Use an RLM when your input exceeds that threshold, when you need consistent reasoning quality across a massive corpus, or when your task naturally decomposes into independent sub-questions that can be parallelized.</p>
+  </div>
+
+  <!-- ════ SECTION 8 ════ -->
+  <a class="section-anchor" id="usecases"></a>
+  <h2>08 · Real-World Applications</h2>
+
+  <div class="use-grid">
+    <div class="use-card">
+      <span class="use-icon">⚖️</span>
+      <div class="use-title">Legal Discovery</div>
+      <p class="use-desc">Analyzing thousands of contracts in an M&amp;A data room to identify risk clauses, jurisdictional conflicts, and missing representations. Tasks that previously required weeks of associate labor now complete in hours.</p>
+    </div>
+    <div class="use-card">
+      <span class="use-icon">🔬</span>
+      <div class="use-title">Scientific Literature</div>
+      <p class="use-desc">Synthesizing findings across 500+ research papers to identify contradictions, research gaps, and emerging consensus. The RLM treats each paper as a sub-task and aggregates citations into a structured knowledge graph.</p>
+    </div>
+    <div class="use-card">
+      <span class="use-icon">💻</span>
+      <div class="use-title">Codebase Analysis</div>
+      <p class="use-desc">Understanding a repository with hundreds of files — tracing function call chains, identifying dead code, proposing system-wide refactors. Workers handle individual modules; the root maintains architectural context.</p>
+    </div>
+    <div class="use-card">
+      <span class="use-icon">🎬</span>
+      <div class="use-title">Video Intelligence</div>
+      <p class="use-desc">Processing hours of video by breaking it into scenes and frames. Workers analyze individual segments; the root synthesizes narrative arcs, detects anomalies, and generates time-stamped reports.</p>
+    </div>
+  </div>
+
+  <!-- ════ SECTION 9 ════ -->
+  <a class="section-anchor" id="challenges"></a>
+  <h2>09 · Challenges &amp; Open Problems</h2>
+
+  <div class="challenges">
+    <div class="ch-card">
+      <span class="ch-icon">⏱</span>
+      <div class="ch-title">Latency</div>
+      <p class="ch-desc">Each recursive call adds round-trip time. A deep call tree with 50 sub-calls may take 3–5× longer than a single long-context call, even with parallelism. Depth-limiting and batching strategies help but don't fully solve it.</p>
+    </div>
+    <div class="ch-card">
+      <span class="ch-icon">🔗</span>
+      <div class="ch-title">Error Propagation</div>
+      <p class="ch-desc">A Worker that produces a subtly wrong summary can corrupt the Root's final synthesis. Researchers use voting mechanisms (run 3 workers per chunk, take majority), schema validation, and confidence scoring to mitigate this.</p>
+    </div>
+    <div class="ch-card">
+      <span class="ch-icon">🛠</span>
+      <div class="ch-title">Runtime Complexity</div>
+      <p class="ch-desc">Building a production RLM environment (scheduler, REPL sandbox, environment store, call graph manager) is non-trivial engineering. Libraries like LangGraph, AutoGen, and Prime Intellect's RLMEnv are beginning to abstract this.</p>
+    </div>
+  </div>
+
+  <div class="callout rust">
+    <span class="callout-label">⚠ Research Frontier</span>
+    <p>The biggest open question is <strong>when to recurse</strong>. Current systems use fixed rules (chunk size thresholds). Ideally, the Root LM would learn from experience — via RL — exactly when decomposition helps versus when a direct answer is better. This "meta-strategy" learning is an active area of research.</p>
+  </div>
+
+  <!-- ════ SECTION 10 ════ -->
+  <a class="section-anchor" id="future"></a>
+  <h2>10 · The Future: What Comes Next</h2>
+
+  <p>
+    Recursive Language Models are not the end-state — they are the current frontier. Several research directions will shape how this technology evolves:
+  </p>
+
+  <h3>Learned Recursion Policies</h3>
+  <p>
+    Today, decomposition is hand-coded or heuristic. The next step is using Reinforcement Learning to train the Root LM's <em>planning policy</em> — rewarding it when its decomposition strategy leads to correct, efficient answers and penalizing unnecessary depth. This would make the system adaptive rather than rule-based.
+  </p>
+
+  <h3>Multimodal Recursion</h3>
+  <p>
+    Current RLMs work primarily on text. Extending the pattern to images, audio, and video — where a "chunk" might be a scene, a frame, or a 10-second audio segment — would unlock applications in medical imaging analysis, surveillance, and entertainment.
+  </p>
+
+  <h3>Persistent Memory Across Sessions</h3>
+  <p>
+    Future RLMs may maintain a persistent "long-term memory tree" — a compressed hierarchy of findings from previous sessions. Rather than reprocessing a document from scratch each time, the system retrieves relevant sub-tree results from a cache.
+  </p>
+
+  <h3>Collaborative Multi-Agent Trees</h3>
+  <p>
+    Rather than one Root calling homogeneous Workers, future systems may orchestrate <em>specialized</em> agents — a legal-domain expert, a financial analyst, a code reviewer — each operating as a node in the call tree, communicating through structured interfaces.
+  </p>
+
+  <div class="diagram-wrap" id="evolution-timeline">
+    <div class="mermaid">
+timeline
+    title The Evolution of Recursive AI Systems
+    section 2013–2018
+        RvNNs dominate NLP : Parse-tree composition
+        RNTN achieves 85% on SST : Sentiment via tensor networks
+        Transformers arrive : Attention replaces recursion in architecture
+    section 2019–2023
+        BERT, GPT-3, PaLM scale up : Long-context windows emerge
+        Context rot discovered : Quality degrades beyond 100K tokens
+        First agentic frameworks : LangChain, AutoGPT experiments
+    section 2024–2025
+        MIT CSAIL RLM paper : Formal recursive inference framework
+        Prime Intellect RLMEnv : 10M-token benchmark broken
+        DeepSeek-R1 synergy : RL reasoning + RLM scaffolds
+    section 2026+
+        Learned recursion policies : RL-optimized decomposition
+        Multimodal RLMs : Video, audio, image recursion
+        Persistent memory trees : Cross-session hierarchical state
+    </div>
+    <p class="diagram-caption">Figure 4: Timeline of recursive AI — from tree-structured neurons to scaffolded inference systems.</p>
+  </div>
+
+  <div class="pull-quote">
+    "The path to superhuman AI is not a bigger brain — it is a better workflow. Recursion is how intelligent systems manage complexity at scale."
+  </div>
+
+  <h2>Conclusion</h2>
+
+  <p>
+    Recursive Language Models represent a fundamental shift in how we think about AI scalability. The industry spent a decade racing to build larger context windows. RLMs reframe the question entirely: rather than making the AI see more at once, we teach it to <em>navigate intelligently</em> through what it cannot see.
+  </p>
+
+  <p>
+    From the elegant tree-brain of the 2010s RvNNs — with their composition functions and backpropagation through structure — to today's Planner-Programmer scaffolds wrapping trillion-parameter transformers, the thread is consistent: <mark>intelligence is not about raw capacity, it is about strategy</mark>.
+  </p>
+
+  <p>
+    For students, the core insight is surprisingly simple: a smart system breaks hard problems into easy ones, solves them in parallel, and combines the results. For professionals, the technical architecture — the REPL environment, the call tree, the root-worker split, the RL reasoning synergy — provides a concrete blueprint for building systems that operate on truly industrial-scale data.
+  </p>
+
+  <p>
+    The recursive revolution is not coming. It is already here, processing your legal contracts, your codebases, and your scientific literature — one carefully scoped sub-task at a time.
+  </p>
+
+</main>
+
+<!-- ═══════════════════════════════════════════ REFERENCES ═══ -->
+<div class="footer-refs">
+  <h3>References &amp; Further Reading</h3>
+  <ol class="ref-list">
+    <li data-n="1"><a href="https://arxiv.org/html/2512.24601v1">Recursive Language Models (RLM) — MIT CSAIL arXiv Paper, December 2024.</a></li>
+    <li data-n="2"><a href="https://www.primeintellect.ai/blog/rlm">Recursive Language Models: The Paradigm of 2026 — Prime Intellect Blog.</a></li>
+    <li data-n="3"><a href="https://alexzhang13.github.io/blog/2025/rlm/">Recursive Language Models — Alex L. Zhang, 2025.</a></li>
+    <li data-n="4"><a href="https://nlp.stanford.edu/~socherr/EMNLP2013_RNTN.pdf">Recursive Deep Models for Semantic Compositionality Over a Sentiment Treebank — Socher et al., EMNLP 2013.</a></li>
+    <li data-n="5"><a href="https://www.cs.cornell.edu/~oirsoy/files/nips14drsv.pdf">Deep Recursive Neural Networks for Compositionality in Language — Irsoy &amp; Cardie, NeurIPS 2014.</a></li>
+    <li data-n="6"><a href="https://en.wikipedia.org/wiki/Recursive_neural_network">Recursive Neural Network — Wikipedia.</a></li>
+    <li data-n="7"><a href="https://venturebeat.com/orchestration/mits-new-recursive-framework-lets-llms-process-10-million-tokens-without">MIT's New Recursive Framework Lets LLMs Process 10 Million Tokens — VentureBeat.</a></li>
+    <li data-n="8"><a href="https://dextralabs.com/blog/recursive-language-models-rlm/">Recursive Language Models (RLM) — Dextra Labs Blog.</a></li>
+    <li data-n="9"><a href="https://amdatalakehouse.substack.com/p/what-are-recursive-language-models">What Are Recursive Language Models? — AM Data Lakehouse.</a></li>
+    <li data-n="10"><a href="https://www.nature.com/articles/s41586-025-09422-z">Reinforcement Learning for Reasoning — Nature, 2025.</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ FOOTER ═══ -->
+<footer>
+  <div>
+    <div style="font-family:'Playfair Display',serif; font-size:20px; color:var(--gold); margin-bottom:6px;">Recursive Language Models</div>
+    <div>A technical deep-dive blog · February 2026</div>
+  </div>
+  <div style="text-align:right;">
+    <div>Sources: MIT CSAIL · Prime Intellect · Stanford NLP · arXiv</div>
+    <div style="margin-top:4px;">For educational purposes. Diagrams generated inline.</div>
+  </div>
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#1a6b6b',
+      primaryTextColor: '#ffffff',
+      primaryBorderColor: '#0f4f4f',
+      lineColor: '#c9a84c',
+      secondaryColor: '#2a2420',
+      tertiaryColor: '#faf8f3',
+      background: '#ffffff',
+      mainBkg: '#1a6b6b',
+      nodeBorder: '#0f4f4f',
+      clusterBkg: '#f4f0e8',
+      titleColor: '#0f0d0a',
+      edgeLabelBackground: '#ffffff',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    timeline: { disableMulticolor: false, fontSize: '16px' }
+  });
+
+  // Make the timeline diagram zoomable once rendered
+  const timelineContainer = document.getElementById('evolution-timeline');
+  if (timelineContainer) {
+    const observer = new MutationObserver((mutations, obs) => {
+      const svg = timelineContainer.querySelector('svg');
+      if (svg) {
+        setTimeout(() => {
+          svgPanZoom(svg, {
+            zoomEnabled: true,
+            controlIconsEnabled: true,
+            fit: true,
+            center: true,
+            minZoom: 0.5,
+            maxZoom: 5
+          });
+        }, 100);
+        obs.disconnect();
+      }
+    });
+    observer.observe(timelineContainer, { childList: true, subtree: true });
+  }
+</script>
+
+</body>
+</html>

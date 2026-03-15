@@ -1,0 +1,151 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta name="post-tag"   content="RAG" />
+<meta name="post-title" content="Dense vs Sparse vs Hybrid: Choosing the Right Retrieval Strategy" />
+<meta name="post-date"  content="Jan 22, 2025" />
+<meta name="post-read"  content="9 min" />
+</head><body><div class="post-content">
+
+<blockquote><p><strong>The short answer:</strong> dense retrieval understands meaning, sparse retrieval nails exact terms, and hybrid search gives you both. But the devil is in how you combine them.</p></blockquote>
+
+<h2>The Retrieval Problem</h2>
+<p>Before your LLM can answer anything, it needs the right information. Retrieval is the step that decides what "right" means — and getting it wrong is the most common reason RAG systems fail. Not the LLM. Not the prompt. The retrieval.</p>
+<p>There are three main paradigms, each with distinct strengths. Understanding when each wins helps you build systems that don't fall over in production.</p>
+
+<h2>Dense Retrieval — Semantic Understanding</h2>
+<p>Dense retrieval converts both your documents and queries into high-dimensional vectors using an embedding model. Similarity is measured by vector distance (cosine, dot product). Documents that are <em>semantically similar</em> to the query rank high, even if they share zero words with it.</p>
+<p><strong>Where it wins:</strong></p>
+<ul>
+  <li>Paraphrase matching — user asks "how do I reset my password", document says "steps to change your login credentials"</li>
+  <li>Concept-level retrieval — query is about an idea, not a specific term</li>
+  <li>Multilingual search with a multilingual embedding model</li>
+  <li>Short, conversational queries</li>
+</ul>
+<p><strong>Where it fails:</strong></p>
+<ul>
+  <li>Exact term matching — part numbers, product codes, names, IDs</li>
+  <li>Rare or domain-specific terms that the embedding model has never seen (it will embed them poorly)</li>
+  <li>Queries where the user knows exactly what they're looking for and can articulate it precisely</li>
+</ul>
+<p>The underlying issue with dense retrieval for exact terms is that embedding models are trained to cluster semantically similar concepts. A part number like "XYZ-4400" might get embedded similarly to other alphanumeric strings in the model's training distribution — completely wrong for your domain.</p>
+
+<h2>Sparse Retrieval — Exact Term Matching</h2>
+<p>Sparse retrieval (BM25 being the most common implementation) operates on term frequency. A query term that appears in a document is a direct signal. The scoring formula accounts for how often the term appears in the document, how rare it is across the corpus, and document length normalization.</p>
+<p><strong>Where it wins:</strong></p>
+<ul>
+  <li>Exact keyword lookup — part numbers, names, specific codes</li>
+  <li>Queries where precision matters more than recall</li>
+  <li>Short documents where term frequency is meaningful</li>
+  <li>Domain-specific jargon the embedding model doesn't understand well</li>
+</ul>
+<p><strong>Where it fails:</strong></p>
+<ul>
+  <li>Synonyms and paraphrasing — "how to change" vs "steps to modify"</li>
+  <li>Conceptual queries with no obvious keyword matches</li>
+  <li>Long, verbose queries where the important terms are buried</li>
+</ul>
+
+<h2>Hybrid Search — Combining Both</h2>
+<p>Hybrid search runs both a dense retrieval pass and a sparse retrieval pass, then merges the results. The key challenge is <strong>score normalization</strong>: dense retrieval returns cosine similarity scores in [-1, 1], BM25 returns raw frequency-based scores in [0, ∞). You can't add them directly.</p>
+
+<h3>Reciprocal Rank Fusion (RRF)</h3>
+<p>RRF is the most robust merging strategy and the one I'd recommend starting with. Instead of normalizing raw scores, it uses the <em>rank</em> of each document in each result list:</p>
+
+<pre><code class="language-python">def reciprocal_rank_fusion(results_lists: list[list], k: int = 60) -> list:
+    """
+    results_lists: list of ranked document lists (one per retriever)
+    k: smoothing constant (60 is the standard default)
+    """
+    scores = {}
+    for results in results_lists:
+        for rank, doc_id in enumerate(results, start=1):
+            if doc_id not in scores:
+                scores[doc_id] = 0.0
+            scores[doc_id] += 1.0 / (k + rank)
+
+    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+</code></pre>
+
+<p>RRF is rank-position agnostic — it doesn't care whether a document had a cosine similarity of 0.95 or 0.62, only whether it was ranked 1st or 10th. This makes it inherently robust to the scale mismatch between dense and sparse scores.</p>
+
+<h3>Weighted Score Fusion</h3>
+<p>The alternative is min-max normalizing each score list to [0, 1] and then taking a weighted sum. This gives you a tunable knob to emphasize dense or sparse results:</p>
+
+<pre><code class="language-python">def weighted_fusion(dense_scores, sparse_scores, alpha=0.5):
+    """alpha=0 is pure sparse, alpha=1 is pure dense"""
+    # Normalize each to [0, 1]
+    def minmax(scores):
+        mn, mx = min(scores.values()), max(scores.values())
+        return {k: (v - mn) / (mx - mn + 1e-9) for k, v in scores.items()}
+
+    norm_dense  = minmax(dense_scores)
+    norm_sparse = minmax(sparse_scores)
+
+    all_ids = set(norm_dense) | set(norm_sparse)
+    combined = {
+        doc_id: alpha * norm_dense.get(doc_id, 0)
+               + (1 - alpha) * norm_sparse.get(doc_id, 0)
+        for doc_id in all_ids
+    }
+    return sorted(combined.items(), key=lambda x: x[1], reverse=True)
+</code></pre>
+
+<p>In practice, RRF is easier to deploy (no tuning required) and performs surprisingly close to optimally-tuned weighted fusion on most benchmarks. Start with RRF.</p>
+
+<h2>Practical Implementation with Milvus</h2>
+<pre><code class="language-python">from pymilvus import Collection, AnnSearchRequest, RRFRanker
+
+collection = Collection("documents")
+
+# Dense search request
+dense_request = AnnSearchRequest(
+    data=[query_embedding],
+    anns_field="dense_vector",
+    param={"metric_type": "COSINE", "params": {"nprobe": 16}},
+    limit=50
+)
+
+# Sparse search request (SPLADE or BM25 vectors)
+sparse_request = AnnSearchRequest(
+    data=[query_sparse_vector],
+    anns_field="sparse_vector",
+    param={"metric_type": "IP"},
+    limit=50
+)
+
+# Hybrid search with RRF merging
+results = collection.hybrid_search(
+    reqs=[dense_request, sparse_request],
+    rerank=RRFRanker(k=60),
+    limit=20,
+    output_fields=["text", "source", "page", "section"]
+)
+</code></pre>
+
+<h2>The BM25 Pre-processing Problem</h2>
+<p>One detail that gets overlooked: BM25 works on tokenized, cleaned terms — not raw query strings. If your user submits <code>"Find all docs about XYZ-4400 (rev. 3)"</code>, you need to:</p>
+<ul>
+  <li>Strip punctuation intelligently (hyphen in "XYZ-4400" should be preserved, parentheses removed)</li>
+  <li>Handle stop words (remove "find", "all", "docs", "about")</li>
+  <li>Normalize case</li>
+  <li>Expand abbreviations where possible</li>
+</ul>
+<p>A small pre-processing pipeline before BM25 scoring makes a measurable difference in sparse retrieval quality. Don't skip it.</p>
+
+<h2>When to Use Each Strategy</h2>
+<table>
+  <thead><tr><th>Scenario</th><th>Best Strategy</th></tr></thead>
+  <tbody>
+    <tr><td>General QnA over prose documents</td><td>Dense or Hybrid</td></tr>
+    <tr><td>Domain with lots of part numbers / codes</td><td>Hybrid (sparse matters here)</td></tr>
+    <tr><td>Users ask conversational questions</td><td>Dense</td></tr>
+    <tr><td>Users search with exact known terms</td><td>Sparse or Hybrid</td></tr>
+    <tr><td>Low latency is critical</td><td>Dense only (one index lookup)</td></tr>
+    <tr><td>Highest possible recall is critical</td><td>Hybrid always</td></tr>
+  </tbody>
+</table>
+
+<p>My default recommendation: <strong>start with hybrid</strong>. The latency overhead is modest (two concurrent searches), the recall improvement is consistent, and RRF requires zero tuning. You can always simplify back to pure dense if profiling shows retrieval is your latency bottleneck.</p>
+
+<hr />
+<p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</div></body></html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog — Loading…</title>
+  <meta name="description" content="" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── TOOLBAR ───────────────────────────────────────── */
+    .blog-toolbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: var(--nav-h); z-index: 100;
+    }
+    .toolbar-inner {
+      max-width: var(--max-w); margin: 0 auto;
+      padding: 1rem var(--px);
+      display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+    }
+    .search-wrap {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 0.55rem 1rem; flex: 1; max-width: 320px;
+      transition: border-color 0.2s;
+    }
+    .search-wrap:focus-within { border-color: var(--amber); }
+    .search-icon { color: var(--muted); font-size: 0.9rem; flex-shrink: 0; }
+    .search-input {
+      background: none; border: none; outline: none;
+      color: var(--cream); font-family: var(--ff-mono);
+      font-size: 0.78rem; letter-spacing: 0.04em; width: 100%;
+    }
+    .search-input::placeholder { color: var(--muted); }
+
+    .tag-filters { display: flex; gap: 0.38rem; flex-wrap: wrap; }
+    .tag-filter {
+      font-family: var(--ff-mono); font-size: 0.64rem; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 0.3rem 0.8rem;
+      border: 1px solid var(--border); background: none;
+      color: var(--muted); transition: all 0.2s; white-space: nowrap;
+    }
+    .tag-filter:hover { color: var(--cream); border-color: var(--muted2); }
+    .tag-filter.active { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+
+    .post-count {
+      font-family: var(--ff-mono); font-size: 0.64rem; letter-spacing: 0.1em;
+      color: var(--muted); margin-left: auto; white-space: nowrap;
+    }
+
+    /* ── BLOG GRID ─────────────────────────────────────── */
+    .blog-main { max-width: var(--max-w); margin: 0 auto; padding: 4rem var(--px) 7rem; }
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+
+    /* Featured (first card when no filter) */
+    .post-card-featured {
+      grid-column: span 3;
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--surface); border: 1px solid var(--border);
+      position: relative; overflow: hidden;
+      transition: border-color 0.3s, background 0.25s;
+    }
+    .post-card-featured::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--amber);
+    }
+    .post-card-featured:hover { border-color: rgba(245,166,35,.3); background: var(--surface2); }
+    .feat-label {
+      position: absolute; top: 1.5rem; right: 1.5rem;
+      font-family: var(--ff-mono); font-size: 0.58rem; letter-spacing: 0.14em;
+      text-transform: uppercase; background: var(--amber); color: var(--bg);
+      padding: 0.18rem 0.55rem;
+    }
+    .feat-left {
+      padding: 3rem 3rem;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 0.9rem;
+    }
+    .feat-right {
+      padding: 3rem;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 0.7rem;
+    }
+    .feat-title {
+      font-family: var(--ff-display); font-size: 1.7rem; font-weight: 900;
+      line-height: 1.18; color: var(--cream); letter-spacing: -0.015em;
+    }
+    .feat-excerpt { font-size: 0.92rem; line-height: 1.78; color: var(--ink-dim); }
+    .feat-meta {
+      font-family: var(--ff-mono); font-size: 0.65rem; letter-spacing: 0.06em; color: var(--muted);
+      padding-top: 1rem; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .feat-arrow { color: var(--amber); transition: transform 0.2s; }
+    .post-card-featured:hover .feat-arrow { transform: translateX(5px); }
+
+    /* Empty state */
+    .empty-state {
+      grid-column: 1/-1; padding: 6rem 2rem;
+      text-align: center; color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; display: block; margin-bottom: 1.2rem; }
+    .empty-state p { font-family: var(--ff-mono); font-size: 0.8rem; letter-spacing: 0.06em; }
+
+    @media (max-width: 1024px) {
+      .blog-grid { grid-template-columns: 1fr 1fr; }
+      .post-card-featured { grid-column: span 2; grid-template-columns: 1fr; }
+      .feat-left { border-right: none; border-bottom: 1px solid var(--border); }
+      .toolbar-inner { gap: 0.8rem; }
+    }
+    @media (max-width: 640px) {
+      .blog-grid { grid-template-columns: 1fr; }
+      .post-card-featured { grid-column: span 1; }
+      .search-wrap { max-width: 100%; width: 100%; }
+      .post-count { margin-left: 0; }
+    }
+  </style>
+</head>
+<body class="page-entering">
+  <div id="cursor"></div>
+  <nav id="site-nav"></nav>
+
+  <div class="page-header">
+    <div class="page-header-inner">
+      <span class="page-eyebrow">Writing</span>
+      <h1 class="page-heading r">All <em>Posts</em></h1>
+      <p class="page-subheading r d1">
+        Practical writing on Generative AI, RAG systems, LLM Ops,<br/>
+        and building AI that actually works in production.
+      </p>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="blog-toolbar">
+    <div class="toolbar-inner">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" class="search-input" id="search-input" placeholder="Search posts…" />
+      </div>
+      <div class="tag-filters" id="tag-filters"></div>
+      <span class="post-count" id="post-count"></span>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="blog-main">
+    <div class="blog-grid" id="blog-grid"></div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script type="module">
+    import {
+      getConfig, renderNav, renderFooter,
+      initCursor, attachHover, watchReveal, initTransitions,
+      setFavicon, setOGMeta, tagStyle
+    } from './site.js';
+
+    async function boot() {
+      try {
+        const cfg = await getConfig();
+        const { personal: p, meta: m } = cfg;
+
+        document.title = `Blog — ${p.name}`;
+        document.querySelector('meta[name="description"]').content = m.description;
+        setFavicon(m.faviconEmoji);
+        setOGMeta(cfg, `Blog — ${p.name}`, 'Writing about Generative AI, RAG, and LLM engineering.');
+        renderNav(cfg, 'blog');
+        renderFooter(cfg);
+        initCursor();
+        initTransitions();
+
+        const posts = cfg.posts;
+        const tags  = ['All', ...new Set(posts.map(p => p.tag))];
+
+        let activeTag = 'All';
+        let searchQ   = '';
+
+        // Build tag filters
+        document.getElementById('tag-filters').innerHTML =
+          tags.map(t => `
+            <button class="tag-filter${t === 'All' ? ' active' : ''}" data-tag="${t}">
+              ${t}
+            </button>`).join('');
+
+        document.querySelectorAll('.tag-filter').forEach(btn => {
+          btn.addEventListener('click', () => {
+            activeTag = btn.dataset.tag;
+            document.querySelectorAll('.tag-filter').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderPosts();
+          });
+          attachHover(btn);
+        });
+
+        document.getElementById('search-input').addEventListener('input', e => {
+          searchQ = e.target.value.toLowerCase();
+          renderPosts();
+        });
+
+        function renderPosts() {
+          const filtered = posts.filter(p => {
+            const matchTag    = activeTag === 'All' || p.tag === activeTag;
+            const matchSearch = !searchQ ||
+              p.title.toLowerCase().includes(searchQ)   ||
+              p.excerpt.toLowerCase().includes(searchQ) ||
+              p.tag.toLowerCase().includes(searchQ);
+            return matchTag && matchSearch;
+          });
+
+          document.getElementById('post-count').textContent =
+            `${filtered.length} post${filtered.length !== 1 ? 's' : ''}`;
+
+          const grid = document.getElementById('blog-grid');
+          if (!filtered.length) {
+            grid.innerHTML = `
+              <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p>No posts match "${searchQ || activeTag}"</p>
+              </div>`;
+            return;
+          }
+
+          const showFeatured = !searchQ && activeTag === 'All';
+          grid.innerHTML = filtered.map((post, i) => {
+            const href = `post.html?file=${encodeURIComponent(post.file)}&title=${encodeURIComponent(post.title)}`;
+            if (i === 0 && showFeatured) {
+              return `
+                <a class="post-card-featured r" href="${href}" data-link>
+                  <span class="feat-label">Featured</span>
+                  <div class="feat-left">
+                    <span class="card-tag" style="${tagStyle(post.tag)}">${post.tag}</span>
+                    <h2 class="feat-title">${post.title}</h2>
+                  </div>
+                  <div class="feat-right">
+                    <p class="feat-excerpt">${post.excerpt}</p>
+                    <div class="feat-meta">
+                      <span>${post.date} · ${post.readTime} read</span>
+                      <span class="feat-arrow">→</span>
+                    </div>
+                  </div>
+                </a>`;
+            }
+            return `
+              <a class="post-card r" style="transition-delay:${(i % 3) * .07}s"
+                 href="${href}" data-link>
+                <span class="card-index">${String(i+1).padStart(2,'0')}</span>
+                <span class="card-tag" style="${tagStyle(post.tag)}">${post.tag}</span>
+                <h3 class="card-title">${post.title}</h3>
+                <p class="card-excerpt">${post.excerpt}</p>
+                <div class="card-footer">
+                  <span>${post.date} · ${post.readTime} read</span>
+                  <span class="card-arrow">→</span>
+                </div>
+              </a>`;
+          }).join('');
+
+          document.querySelectorAll('.post-card, .post-card-featured').forEach(attachHover);
+          watchReveal();
+        }
+
+        renderPosts();
+        watchReveal();
+        document.querySelectorAll('a').forEach(attachHover);
+
+      } catch (err) { console.error(err); }
+    }
+    boot();
+  </script>
+</body>
+</html>

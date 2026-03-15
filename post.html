@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Post — Loading…</title>
+  <meta name="description" content="" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root {
+      --ink: #0f0d0a;
+      --parchment: #faf8f3;
+      --cream: #f4f0e8;
+      --gold: #c9a84c;
+      --gold-light: #e8d49a;
+      --rust: #b84a2e;
+      --teal: #1a6b6b;
+      --teal-light: #e8f4f4;
+      --muted: #6b6460;
+      --border: #ddd8ce;
+      --code-bg: #1a1814;
+      --code-text: #e8d49a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background-color: var(--parchment);
+      color: var(--ink);
+      line-height: 1.85;
+      font-size: 19px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--ink);
+      color: var(--parchment);
+      padding: 0;
+      padding-top: var(--nav-h);
+      position: relative;
+    }
+
+    /* Override site-nav border to blend with the dark post header */
+    #site-nav { border-bottom: 1px solid #2a2720 !important; }
+    @media (max-width: 768px) {
+      .nav-body { border-bottom: 1px solid #2a2720 !important; }
+    }
+
+    .header-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      min-height: 520px;
+    }
+
+    .header-text {
+      padding: 64px 60px 64px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .header-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      line-height: 1.08;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+    }
+
+    h1 em { color: var(--gold); font-style: italic; }
+
+    .header-sub {
+      font-size: 18px;
+      color: #c8c0b0;
+      line-height: 1.6;
+      max-width: 480px;
+      font-weight: 300;
+    }
+
+    .header-meta {
+      margin-top: 36px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .header-meta .chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 2px;
+    }
+
+    .header-meta .read-time {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .header-visual {
+      background: linear-gradient(135deg, #1a1814 0%, #0f0d0a 100%);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── TABLE OF CONTENTS ── */
+    .toc-bar {
+      background: var(--ink);
+      border-top: 1px solid #2a2720;
+      padding: 16px 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .toc-track {
+      display: inline-flex;
+      animation: marqueeAnim 80s linear infinite;
+    }
+    .toc-bar:hover .toc-track {
+      animation-play-state: paused;
+    }
+    @keyframes marqueeAnim {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .toc-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      text-decoration: none;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color .2s;
+      padding: 0 24px;
+    }
+    .toc-item:hover { color: var(--gold); }
+    .toc-item span { color: var(--gold); margin-right: 6px; }
+
+    /* ── MAIN CONTENT ── */
+    .content-wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 72px 40px 120px;
+    }
+    .loading-state {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 1rem; padding: 6rem 0;
+      color: var(--muted); text-align: center;
+      font-family: var(--ff-mono); font-size: 0.76rem;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink); color: #888; padding: 48px 80px; font-size: 13px;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 24px; flex-wrap: wrap;
+    }
+    footer a { color: var(--gold); text-decoration: none; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 860px) {
+      .header-grid { grid-template-columns: 1fr; }
+      .header-visual { display: none; }
+      .header-text { padding: 48px 32px; }
+      h1 { font-size: 40px; }
+      .content-wrap { padding: 48px 24px; }
+      .toc-bar { padding: 16px 24px; }
+      footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-grid">
+    <div class="header-text">
+      <div id="post-eyebrow" class="header-eyebrow"></div>
+      <h1 id="post-title"></h1>
+      <p id="post-excerpt" class="header-sub"></p>
+      <div class="header-meta">
+        <span id="post-tag-chip" class="chip"></span>
+        <span id="post-read-time" class="read-time"></span>
+      </div>
+    </div>
+    <div class="header-visual">
+        <!-- This can be a placeholder or a dynamic element in the future -->
+    </div>
+  </div>
+  <nav class="toc-bar" id="toc-bar">
+    <div class="toc-track" id="toc-track"></div>
+  </nav>
+</header>
+
+<main class="content-wrap" id="post-content">
+  <div class="loading-state"><div class="spinner"></div><p>Fetching post…</p></div>
+</main>
+
+<footer>
+  <div>
+    <div id="footer-title" style="font-family:'Playfair Display',serif; font-size:20px; color:var(--gold); margin-bottom:6px;"></div>
+    <div id="footer-subtitle"></div>
+  </div>
+  <div style="text-align:right;">
+      <div><a href="index.html">Home</a> · <a href="blog.html">Blog</a></div>
+      <div style="margin-top:4px;">&copy; <span id="copyright-year"></span> <span id="copyright-name"></span></div>
+  </div>
+</footer>
+
+<script type="module">
+    import { getConfig, setFavicon, renderNav, initCursor, initTransitions, attachHover } from './site.js';
+
+    async function boot() {
+      try {
+        const cfg = await getConfig();
+        setFavicon(cfg.meta.faviconEmoji);
+        renderNav(cfg, 'blog');
+        initCursor();
+        initTransitions();
+
+        // --- DYNAMIC CONTENT LOADING ---
+        const params   = new URLSearchParams(location.search);
+        const filePath = params.get('file');
+
+        if (!filePath) {
+          document.getElementById('post-content').innerHTML = `<p>Error: Post file not specified.</p>`;
+          return;
+        }
+
+        const postData = cfg.posts.find(p => p.file === filePath);
+
+        // 1. Hydrate Header, Footer, and Title from config.json
+        if (postData) {
+          document.title = postData.title + ' — ' + cfg.personal.name;
+          document.getElementById('post-eyebrow').textContent = `${postData.tag} · ${postData.date}`;
+          document.getElementById('post-title').innerHTML = postData.title.replace(/: (.*)/, ': <em>$1</em>');
+          document.getElementById('post-excerpt').textContent = postData.excerpt;
+          document.getElementById('post-tag-chip').textContent = postData.tag;
+          document.getElementById('post-read-time').textContent = `~ ${postData.readTime} read`;
+          document.getElementById('footer-title').textContent = postData.title;
+          document.getElementById('footer-subtitle').textContent = `A ${postData.tag} deep-dive.`;
+        }
+        document.getElementById('copyright-year').textContent = cfg.meta.copyrightYear;
+        document.getElementById('copyright-name').textContent = cfg.personal.name;
+
+        // 2. Fetch and inject post's HTML content
+        const res = await fetch(filePath);
+        if (!res.ok) throw new Error(`Could not load ${filePath}`);
+        const html = await res.text();
+        const doc  = new DOMParser().parseFromString(html, 'text/html');
+        
+        // Extract and append styles from the fetched HTML's head to prevent loss of native styling
+        const sourceStyles = doc.querySelectorAll('head style, head link[rel="stylesheet"]');
+        sourceStyles.forEach(s => document.head.appendChild(s.cloneNode(true)));
+
+        const sourceVis = doc.querySelector('.header-visual');
+        const targetVis = document.querySelector('.header-visual');
+        if (sourceVis && targetVis) {
+            targetVis.innerHTML = sourceVis.innerHTML;
+        }
+
+        const body = doc.querySelector('body');
+        const mainContent = doc.querySelector('main.content-wrap');
+        const contentEl = document.getElementById('post-content');
+
+        if (mainContent) {
+            contentEl.innerHTML = mainContent.innerHTML;
+        } else if (body) {
+            contentEl.innerHTML = body.innerHTML;
+        } else {
+            contentEl.innerHTML = html;
+        }
+
+        const references = doc.querySelector('.footer-refs');
+        if (references) {
+            contentEl.appendChild(references);
+        }
+
+        // 3. Build Table of Contents dynamically from H2 tags
+        const headings = contentEl.querySelectorAll('h2');
+        const tocContainer = document.getElementById('toc-track');
+        const tocHTML = Array.from(headings).map((h, i) => {
+            const id = h.id || h.textContent.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+            if (!h.id) h.id = id; // Keep existing ID if it's already defined
+            return `<a class="toc-item" href="#${id}"><span>${String(i+1).padStart(2,'0')}</span>${h.textContent.replace(/^[0-9\s·]*/, '')}</a>`;
+        }).join('');
+        
+        if (headings.length > 0) {
+            tocContainer.innerHTML = tocHTML + tocHTML; // Duplicate for seamless marquee
+        }
+        
+        // 4. Activate scripts and libraries
+        if (body) {
+            const scripts = body.querySelectorAll('script');
+            scripts.forEach(s => {
+                const newScript = document.createElement('script');
+                if (s.src) {
+                    newScript.src = s.src;
+                } else {
+                    newScript.innerHTML = s.innerHTML;
+                }
+                document.body.appendChild(newScript);
+            });
+        }
+
+        if (window.mermaid) {
+          mermaid.initialize({ startOnLoad: true, theme: 'base' });
+          mermaid.run();
+        }
+        if (window.hljs) {
+          contentEl.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        }
+        
+        // Attach the custom cursor hover effect to any links in the post
+        document.querySelectorAll('a, button, .toc-item').forEach(attachHover);
+
+      } catch (err) {
+        console.error('Failed to render post:', err);
+        const contentEl = document.getElementById('post-content');
+        if(contentEl) contentEl.innerHTML = `<p>Error loading post content. See console for details.</p>`;
+      }
+    }
+    boot();
+  </script>
+</body>
+</html>

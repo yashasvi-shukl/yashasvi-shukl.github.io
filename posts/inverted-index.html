@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inverted Index vs BM25: When You Need Custom Keyword Search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f0d0a;
+      --parchment: #faf8f3;
+      --cream: #f4f0e8;
+      --gold: #c9a84c;
+      --gold-light: #e8d49a;
+      --rust: #b84a2e;
+      --teal: #1a6b6b;
+      --teal-light: #e8f4f4;
+      --muted: #6b6460;
+      --border: #ddd8ce;
+      --code-bg: #1a1814;
+      --code-text: #e8d49a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background-color: var(--parchment);
+      color: var(--ink);
+      line-height: 1.85;
+      font-size: 19px;
+    }
+    header {
+      background: var(--ink);
+      color: var(--parchment);
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .header-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      min-height: 480px;
+    }
+    .header-text {
+      padding: 64px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+    .header-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      line-height: 1.08;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 em { color: var(--gold); font-style: italic; }
+    .header-sub {
+      font-size: 18px;
+      color: #c8c0b0;
+      line-height: 1.6;
+      max-width: 600px;
+      font-weight: 300;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .header-meta {
+      margin-top: 36px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-meta .chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 2px;
+    }
+    .header-meta .read-time { font-size: 13px; color: #888; }
+    .content-wrap { max-width: 800px; margin: 0 auto; padding: 72px 40px 120px; }
+    .content-wrap h2 {
+      font-family: 'Playfair Display', serif; font-size: 38px; font-weight: 700;
+      line-height: 1.15; letter-spacing: -.5px; color: var(--ink);
+      position: relative; margin-top: 72px; margin-bottom: 32px;
+    }
+    .content-wrap h2::after { content: ''; display: block; width: 48px; height: 3px; background: var(--gold); margin-top: 14px; }
+    .content-wrap h3 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; margin-top: 48px; margin-bottom: 16px; color: var(--ink); }
+    .content-wrap h4 { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--teal); margin-top: 32px; margin-bottom: 12px; }
+    .content-wrap p { margin-bottom: 24px; }
+    .content-wrap a { color: var(--teal); text-decoration: none; }
+    .content-wrap a:hover { color: var(--rust); }
+    .content-wrap strong, .content-wrap b { color: var(--ink); font-weight: 600; }
+    .content-wrap em, .content-wrap i { font-style: italic; }
+    .content-wrap ul, .content-wrap ol { padding-left: 28px; margin: 24px 0; }
+    .content-wrap li { line-height: 1.8; margin-bottom: 12px; }
+    .content-wrap li::marker { color: var(--gold); }
+    .content-wrap blockquote { border-left: 4px solid var(--gold); padding-left: 28px; margin: 36px 0; font-size: 22px; line-height: 1.7; color: #2a2420; font-style: italic; font-weight: 300; }
+    .content-wrap blockquote p { margin-bottom: 0; }
+    .content-wrap pre { background: var(--code-bg); color: var(--code-text); font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.65; padding: 28px 32px; border-radius: 6px; overflow-x: auto; margin: 32px 0; position: relative; }
+    .content-wrap code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: #ede8df; padding: 2px 7px; border-radius: 3px; color: var(--rust); }
+    .content-wrap pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+    .content-wrap table { width: 100%; border-collapse: collapse; margin: 2.2rem 0; font-size: 15px;}
+    .content-wrap th { background: var(--ink); color: var(--gold); padding: 14px 20px; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+    .content-wrap td { padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+    .content-wrap tr:nth-child(even) { background: var(--cream); }
+    footer { background: var(--ink); color: #888; padding: 48px 80px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+    footer a { color: var(--gold); text-decoration: none; }
+    @media (max-width: 860px) { .header-text { padding: 48px 32px; } h1 { font-size: 40px; } .content-wrap { padding: 48px 24px; } footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-grid">
+    <div class="header-text">
+      <div class="header-eyebrow">Search · Feb 5, 2025</div>
+      <h1>Inverted Index vs BM25: When You Need <em>Custom Keyword Search</em></h1>
+      <p class="header-sub">BM25 doesn't understand logical AND/OR. Here's how an inverted index with a logical query parser gives you search that actually behaves.</p>
+      <div class="header-meta">
+        <span class="chip">Search</span>
+        <span class="read-time">~ 8 min read</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="content-wrap">
+    <blockquote><p><strong>The gap:</strong> BM25 ranks documents by term frequency. It has no concept of AND, OR, or NOT. If your users need logical search — find all documents containing <em>both</em> X and Y — BM25 will disappoint them every time.</p></blockquote>
+
+    <h2>BM25 Is Excellent — At What It Does</h2>
+    <p>BM25 (Best Match 25) is the backbone of almost every keyword search system built in the last two decades. Elasticsearch, OpenSearch, and Solr all use it as their default relevance scorer. It's battle-tested, fast, and surprisingly effective. For most search problems, it's the right choice.</p>
+    <p>BM25 works by scoring documents based on how frequently query terms appear in them, normalized by document length and calibrated by how rare those terms are across the corpus (IDF). Given the query <code>"Panasonic maintenance manual"</code>, BM25 will return the documents where those terms appear most often — ranked by relevance.</p>
+    <p>Here's the problem: <strong>BM25 treats your entire query as a bag of words</strong>. It doesn't understand operators. It doesn't know that AND means both terms must appear. It has no concept of precedence, grouping, or logical constraints. Every word is just a signal contributing to a relevance score.</p>
+
+    <h2>The Use Case That Broke BM25</h2>
+    <p>Imagine a user who needs to find all documents that mention a specific aircraft part number <em>and</em> a specific vendor. Their natural language query might be:</p>
+    <blockquote><p>"Find all documents containing Panasonic and part XYZ-4400"</p></blockquote>
+    <p>What the user <em>means</em>: return only documents where <strong>both</strong> "Panasonic" <strong>AND</strong> "XYZ-4400" appear. Full stop.</p>
+    <p>What BM25 does: scores and ranks all documents containing any of the words — "find", "all", "documents", "containing", "Panasonic", "and", "part", "XYZ-4400". Documents mentioning only "Panasonic" score well. Documents mentioning only "part" also score. The word "and" is treated as just another term.</p>
+    <p>For a corpus of 14,000 technical documents, this produces noise. Lots of it.</p>
+
+    <h2>The Inverted Index Solution</h2>
+    <p>An inverted index flips the data model. Instead of organizing information as <em>document → list of words</em>, it organizes it as <em>word → list of documents containing that word</em>.</p>
+
+    <pre><code class="language-python"># Conceptually, an inverted index looks like this:
+    index = {
+        "panasonic": [doc_42, doc_117, doc_883, ...],
+        "xyz-4400":  [doc_42, doc_201, doc_556, ...],
+        "boeing":    [doc_11, doc_42, doc_77, ...],
+        # ...
+    }
+    </code></pre>
+
+    <p>When a user searches for "Panasonic", you do a direct dictionary lookup — O(1) — and get back the list of document IDs instantly. No scanning. No scoring loops over 14,000 documents.</p>
+    <p>The full data structure I built had three components:</p>
+    <ul>
+      <li><strong><code>documents</code></strong> — <code>{index: chunk_text}</code>, the actual text of each chunk</li>
+      <li><strong><code>metadata</code></strong> — <code>{index: {source, page, section, title, …}}</code>, rich metadata per chunk</li>
+      <li><strong><code>mapping</code></strong> — <code>{word: [[doc_index, frequency], …]}</code>, the inverted index itself</li>
+    </ul>
+
+    <h2>Building the Logical Query Parser</h2>
+    <p>The inverted index solves the speed problem. The logical query parser solves the intent problem.</p>
+    <p>The input from users is natural language. The search engine needs a structured logical expression. A small LLM layer does this translation:</p>
+
+    <pre><code class="language-text">Input:  "List all documents containing Panasonic and part XYZ-4400"
+    Output: "panasonic AND XYZ-4400"
+
+    Input:  "Find docs about Boeing or Airbus maintenance with part ABC"
+    Output: "(boeing OR airbus) AND ABC"
+
+    Input:  "All contracts from 2023 not involving vendor XYZ"
+    Output: "2023 AND NOT xyz"
+    </code></pre>
+
+    <p>The LLM was given a system prompt with clear rules and a bank of few-shot examples covering the common patterns. Output was always a structured logical string — no prose, no explanation.</p>
+    <p>That logical string then fed into a recursive descent parser that handled operator precedence and bracket grouping:</p>
+
+    <pre><code class="language-python">class LogicalQueryParser:
+        """Parses expressions like: (A OR B) AND C AND NOT D"""
+
+        def parse(self, query: str) -> set:
+            tokens = self.tokenize(query.upper())
+            return self.parse_or(tokens)
+
+        def parse_or(self, tokens) -> set:
+            left = self.parse_and(tokens)
+            while tokens and tokens[0] == 'OR':
+                tokens.pop(0)
+                right = self.parse_and(tokens)
+                left = left | right          # union
+            return left
+
+        def parse_and(self, tokens) -> set:
+            left = self.parse_not(tokens)
+            while tokens and tokens[0] == 'AND':
+                tokens.pop(0)
+                right = self.parse_not(tokens)
+                left = left & right          # intersection
+            return left
+
+        def parse_not(self, tokens) -> set:
+            if tokens and tokens[0] == 'NOT':
+                tokens.pop(0)
+                operand = self.parse_atom(tokens)
+                all_ids = set(range(len(self.documents)))
+                return all_ids - operand     # complement
+            return self.parse_atom(tokens)
+
+        def parse_atom(self, tokens) -> set:
+            token = tokens.pop(0)
+            if token == '(':
+                result = self.parse_or(tokens)
+                tokens.pop(0)  # consume ')'
+                return result
+            # Leaf node — look up in inverted index
+            word = token.lower()
+            if word not in self.mapping:
+                return set()
+            return {entry[0] for entry in self.mapping[word]}
+    </code></pre>
+
+    <h2>Performance Comparison</h2>
+    <table>
+      <thead><tr><th>Dimension</th><th>BM25</th><th>Inverted Index + Logic Parser</th></tr></thead>
+      <tbody>
+        <tr><td>Query type</td><td>Relevance ranking</td><td>Exact logical filtering</td></tr>
+        <tr><td>AND support</td><td>No (soft weighting)</td><td>Yes (strict intersection)</td></tr>
+        <tr><td>OR / NOT support</td><td>No</td><td>Yes</td></tr>
+        <tr><td>Latency (14K docs)</td><td>~200–800ms</td><td>&lt;50ms</td></tr>
+        <tr><td>Result type</td><td>Ranked by score</td><td>All matching docs</td></tr>
+        <tr><td>Best for</td><td>"Relevant results for this query"</td><td>"Every doc containing X AND Y"</td></tr>
+      </tbody>
+    </table>
+
+    <h2>When to Choose Each</h2>
+    <p>The answer is usually <em>both</em>. They solve different problems:</p>
+    <ul>
+      <li>Use <strong>BM25 / semantic search</strong> when users want relevant results ranked by how well they match a natural language question</li>
+      <li>Use an <strong>inverted index with logical parsing</strong> when users need to know "which documents contain this specific combination of terms" — compliance checks, part number lookups, contract searches</li>
+    </ul>
+    <p>In many real systems, you expose both as separate search modes and let users pick based on their intent. That's exactly what we did — a toggle on the UI between "Ask a question" (RAG) and "Keyword search" (inverted index).</p>
+
+    <h2>A Note on Scaling</h2>
+    <p>This approach works beautifully up to a few hundred thousand documents. Beyond that, your in-memory inverted index starts consuming significant RAM, and you'll want to move to a proper search engine like Elasticsearch or Typesense that implements inverted indexes at scale with disk-backed storage and distributed sharding.</p>
+    <p>But for enterprise document search at the 10K–200K document range, a well-built Python inverted index is fast, transparent, and requires zero infrastructure dependencies.</p>
+
+    <hr />
+    <p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</main>
+
+<footer>
+  <div>
+    <div style="font-family:'Playfair Display',serif; font-size:20px; color:var(--gold); margin-bottom:6px;">Inverted Index vs BM25</div>
+    <div>A Search deep-dive.</div>
+  </div>
+  <div style="text-align:right;">
+    <div><a href="../index.html">Home</a> · <a href="../blog.html">Blog</a></div>
+    <div style="margin-top:4px;">Yashasvi Shukla</div>
+  </div>
+</footer>
+
+<script>
+  // Initialize highlight.js
+  document.addEventListener('DOMContentLoaded', (event) => {
+    document.querySelectorAll('pre code').forEach((el) => {
+      hljs.highlightElement(el);
+    });
+  });
+</script>
+
+</body>
+</html>

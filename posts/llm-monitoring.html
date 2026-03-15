@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta name="post-tag"   content="LLM Ops" />
+<meta name="post-title" content="LLM Monitoring in Production: What I Learned the Hard Way" />
+<meta name="post-date"  content="Dec 12, 2024" />
+<meta name="post-read"  content="6 min" />
+</head><body><div class="post-content">
+
+<blockquote><p><strong>Traditional monitoring tracks availability and latency. LLM monitoring tracks whether your system is actually doing what it's supposed to do. These are very different problems.</strong></p></blockquote>
+
+<h2>The Monitoring Gap</h2>
+<p>When you deploy a traditional API, monitoring is well understood: uptime, response time, error rate, throughput. These metrics tell you if the system is working. For LLMs, the system can be perfectly "up" — responding in milliseconds, zero exceptions, 100% availability — while simultaneously giving users wrong answers, hallucinating facts, ignoring safety constraints, or drifting in quality over time.</p>
+<p>That's the monitoring gap. And if you're running RAG in production without addressing it, you're flying blind.</p>
+<p>Here's what I learned from deploying RAG systems into production and watching them fail in ways that standard metrics didn't catch.</p>
+
+<h2>The Four Dimensions That Matter</h2>
+
+<h3>1. Retrieval quality</h3>
+<p>Your retrieval layer is the foundation. If it's returning irrelevant documents, nothing downstream can compensate. Track:</p>
+<ul>
+  <li><strong>Context relevance score:</strong> For each query-response pair, how relevant were the retrieved documents to the question? (RAGAS has a metric for this.)</li>
+  <li><strong>Retrieval coverage:</strong> What percentage of responses used the full allocated context window vs. a partial fill? Partial fills often indicate retrieval failure.</li>
+  <li><strong>Source distribution:</strong> Which documents are being retrieved most frequently? Unexpected spikes might indicate a retrieval bug or a prompt injection attempt.</li>
+</ul>
+
+<h3>2. Generation faithfulness</h3>
+<p>The model should only generate claims that are grounded in the retrieved context. Track:</p>
+<ul>
+  <li><strong>Faithfulness rate:</strong> The percentage of responses where every claim is supported by context. Set an alert if this drops below your baseline.</li>
+  <li><strong>Denial rate:</strong> How often does your system say "I don't know / this isn't in the documentation"? Too low might mean hallucination. Too high means poor retrieval or an overly conservative prompt.</li>
+  <li><strong>Unsupported claim patterns:</strong> Which <em>types</em> of claims get hallucinated? Dates? Numbers? Procedural steps? This tells you what to tighten in your prompt.</li>
+</ul>
+
+<h3>3. Guardrails effectiveness</h3>
+<p>Guardrails exist to catch harmful inputs and outputs. But you can only trust them if you know they're firing correctly:</p>
+<ul>
+  <li><strong>Input block rate:</strong> What percentage of inputs are flagged by input guardrails? A sudden spike might indicate a coordinated attack.</li>
+  <li><strong>False positive rate:</strong> Are legitimate queries being blocked? Track this via user feedback ("my question was blocked but shouldn't have been").</li>
+  <li><strong>Output block rate:</strong> How often is the generated response blocked before reaching the user? Correlate with the query type.</li>
+</ul>
+
+<h3>4. Drift over time</h3>
+<p>LLM systems degrade. Not because the model changes (it doesn't — in a deployed system, the model weights are fixed), but because the world changes. New documents are indexed. User query patterns shift. The retrieval distribution drifts away from your evaluation baseline.</p>
+<ul>
+  <li>Run your evaluation set against the live system weekly and track metric trends</li>
+  <li>Monitor <strong>query embedding drift</strong> — if the distribution of incoming query vectors shifts significantly, your retrieval is likely to degrade</li>
+  <li>Track <strong>user feedback signals</strong> (thumbs up/down, explicit corrections) as a leading indicator of quality drift</li>
+</ul>
+
+<h2>Tooling: What I've Used</h2>
+
+<h3>Arize AI</h3>
+<p>Arize is purpose-built for LLM observability. You log spans — each retrieval call, each generation call — and Arize builds a trace view that shows you exactly what happened at each step for any given query. The hallucination detection integration runs automatically on logged traces. The UMAP visualization of your query embedding space is genuinely useful for spotting drift.</p>
+<pre><code class="language-python">import arize.otel
+from opentelemetry import trace
+
+# Instrument your LLM calls
+arize.otel.register(
+    space_id=os.environ["ARIZE_SPACE_ID"],
+    api_key=os.environ["ARIZE_API_KEY"],
+    model_id="my-rag-system",
+    model_version="1.0.0"
+)
+
+# All LLM calls via LangChain are now auto-traced
+# Add custom attributes for your domain
+tracer = trace.get_tracer(__name__)
+with tracer.start_as_current_span("retrieval") as span:
+    span.set_attribute("query.type", "keyword_search")
+    span.set_attribute("num_docs_retrieved", len(results))
+    span.set_attribute("retrieval.source", "milvus")
+</code></pre>
+
+<h3>WhyLabs</h3>
+<p>WhyLabs is better for statistical drift detection. It maintains rolling statistics on your input/output distributions and alerts when they drift significantly. Useful for catching data quality issues in your document pipeline — if a new batch of documents is indexed with bad parsing, WhyLabs will notice the change in chunk length distribution before your users do.</p>
+
+<h3>Custom Grafana Dashboard</h3>
+<p>For operational metrics (latency percentiles, throughput, error rates, guardrail hit rates), nothing beats a custom Grafana dashboard. Export your structured logs to a time-series store and build panels for the metrics that matter for your specific system. The LLM-specific platforms don't replace this — they complement it.</p>
+
+<h2>The Most Useful Alert I've Set Up</h2>
+<p>After experimenting with many alert configurations, the single most useful alert is:</p>
+<blockquote><p><strong>Alert when faithfulness rate (7-day rolling average) drops more than 5% relative to the 30-day baseline.</strong></p></blockquote>
+<p>This catches retrieval degradation, document pipeline issues, prompt regression, and model drift all in one signal. It fires rarely (which means when it fires, something real has changed) and it always corresponds to something the user would actually notice.</p>
+
+<h2>Data Capture and Feedback Loops</h2>
+<p>Monitoring without a feedback loop is just alerting. The goal is to close the loop: monitor → detect → diagnose → fix → evaluate → deploy → repeat.</p>
+<p>The minimum viable feedback loop for a RAG system:</p>
+<ol>
+  <li>Capture every query, context, and response (with appropriate privacy controls)</li>
+  <li>Add thumbs up/down to your UI and log the feedback with the full trace</li>
+  <li>Weekly: review all thumbs-down traces manually — 30 minutes of review surfaces more insights than any automated metric</li>
+  <li>Build a growing eval set from real failures — these are far more valuable than synthetic evals</li>
+  <li>Run evals before every deployment that touches retrieval, prompts, or document processing</li>
+</ol>
+<p>The eval set you build from production failures is your most valuable asset. Protect it. Grow it. Run it religiously.</p>
+
+<hr />
+<p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</div></body></html>

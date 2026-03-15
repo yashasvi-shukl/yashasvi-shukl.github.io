@@ -1,0 +1,119 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta name="post-tag"   content="LLM Ops" />
+<meta name="post-title" content="LLM-as-a-Judge: Grading Your RAG Responses for Hallucinations" />
+<meta name="post-date"  content="Jan 10, 2025" />
+<meta name="post-read"  content="6 min" />
+</head><body><div class="post-content">
+
+<blockquote><p><strong>The uncomfortable truth:</strong> your RAG system is generating wrong answers right now. You probably don't know which ones. LLM-as-a-Judge is how you find out.</p></blockquote>
+
+<h2>Why RAG Systems Hallucinate</h2>
+<p>RAG is supposed to fix hallucination by grounding the LLM in retrieved context. And it helps — a lot. But it doesn't eliminate the problem. RAG systems hallucinate in at least three distinct ways:</p>
+<ul>
+  <li><strong>Faithfulness failures:</strong> The LLM generates a claim that sounds reasonable but isn't actually supported by the retrieved documents</li>
+  <li><strong>Retrieval failures:</strong> The relevant document wasn't retrieved, so the LLM fills the gap with its parametric memory</li>
+  <li><strong>Synthesis failures:</strong> Multiple retrieved chunks contain contradictory information and the LLM picks one (or blends them incorrectly)</li>
+</ul>
+<p>The first type — faithfulness failures — is what LLM-as-a-Judge is best at catching.</p>
+
+<h2>The Core Idea</h2>
+<p>You use a second LLM call (the "judge") to evaluate the output of your first LLM call (the "generator"). The judge receives:</p>
+<ul>
+  <li>The user's question</li>
+  <li>The retrieved context chunks</li>
+  <li>The generated answer</li>
+</ul>
+<p>And it answers one question: <strong>is every claim in this answer supported by the provided context?</strong></p>
+<p>This sounds circular — using an LLM to check an LLM. In practice it works, for an important reason: <em>verification is easier than generation</em>. It's much easier for the judge to check whether a specific claim appears in a given text than it is for the generator to avoid inventing claims in the first place.</p>
+
+<h2>A Practical Grading Prompt</h2>
+<pre><code class="language-python">HALLUCINATION_JUDGE_PROMPT = """You are a strict factual grader. Your only job is to assess whether an AI-generated answer is faithful to the provided context.
+
+CONTEXT:
+{context}
+
+QUESTION:
+{question}
+
+GENERATED ANSWER:
+{answer}
+
+Instructions:
+1. Read every sentence in the generated answer.
+2. For each sentence, check whether it is directly supported by the context.
+3. A sentence is supported if the context contains the information needed to make that claim.
+4. A sentence is NOT supported if it introduces information not present in the context, even if that information might be generally true.
+5. Return ONLY valid JSON — no explanation, no preamble.
+
+Return format:
+{{
+  "verdict": "faithful" | "hallucinated",
+  "confidence": 0.0-1.0,
+  "unsupported_claims": ["claim 1", "claim 2"],
+  "reasoning": "One sentence explanation"
+}}"""
+
+import json
+
+async def grade_response(question: str, context: str, answer: str) -> dict:
+    response = await llm.ainvoke(
+        HALLUCINATION_JUDGE_PROMPT.format(
+            context=context,
+            question=question,
+            answer=answer
+        )
+    )
+    try:
+        return json.loads(response.content)
+    except json.JSONDecodeError:
+        # Fallback: strip markdown fences if present
+        cleaned = response.content.strip().strip("```json").strip("```")
+        return json.loads(cleaned)
+</code></pre>
+
+<h2>What to Do With the Verdict</h2>
+<p>Once you have a grade, you have a few options depending on your latency budget and risk tolerance:</p>
+
+<h3>Option 1 — Block and retry</h3>
+<p>If <code>verdict == "hallucinated"</code>, don't return the response. Retry with a more constrained prompt that explicitly lists the unsupported claims and instructs the LLM to avoid them. Cap retries at 2-3 attempts.</p>
+
+<h3>Option 2 — Block and fallback</h3>
+<p>Return a safe fallback response: <em>"I couldn't find a confident answer in the available documentation. Here are the most relevant sections I found."</em> Then show the top retrieved chunks directly. This is honest and often more useful than a hallucinated answer.</p>
+
+<h3>Option 3 — Log and monitor</h3>
+<p>If you can't afford the latency of a blocking check, run the judge asynchronously and log everything. Use the logs to identify patterns — which query types trigger hallucinations? Which document types? This feeds your retrieval improvement loop.</p>
+
+<div class="callout"><p><strong>💡 Production recommendation:</strong> use Option 3 first. Gather data for two weeks. You'll discover that hallucinations cluster around specific query patterns. Then implement blocking checks only for those high-risk patterns rather than every request.</p></div>
+
+<h2>Decomposed Faithfulness with RAGAS</h2>
+<p>The RAGAS framework implements a more rigorous version of this. Instead of judging the entire answer at once, it decomposes the answer into atomic statements and checks each one individually:</p>
+
+<pre><code class="language-python">from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_precision
+
+results = evaluate(
+    dataset=eval_dataset,  # questions, contexts, answers, ground truths
+    metrics=[
+        faithfulness,       # Are claims in answer supported by context?
+        answer_relevancy,   # Does answer actually address the question?
+        context_precision,  # Are retrieved chunks relevant?
+    ]
+)
+print(results.to_pandas())
+</code></pre>
+
+<p>RAGAS gives you a number — typically 0–1 — for each metric across your evaluation set. The magic is using this as a benchmark: before deploying a new retrieval change, run RAGAS on your eval set and ensure faithfulness doesn't drop.</p>
+
+<h2>Limitations to Be Honest About</h2>
+<p>LLM-as-a-Judge is not perfect. The judge itself can make mistakes — especially when the answer contains subtle errors, or when the context is long and the relevant claim is buried. A few things that help:</p>
+<ul>
+  <li>Use a <strong>stronger model</strong> for the judge than for the generator. If your generator is GPT-3.5, use GPT-4o as the judge</li>
+  <li><strong>Temperature 0</strong> for the judge — you want deterministic, consistent grading</li>
+  <li>Ask the judge to output <strong>specific unsupported claims</strong> rather than just a binary verdict — this makes the judgement more traceable</li>
+  <li>Run <strong>human evaluation</strong> on a random sample of judge outputs periodically to catch systematic judge errors</li>
+</ul>
+<p>LLM-as-a-Judge is a safety net, not a guarantee. Combine it with strong retrieval (so the LLM has good context to work with) and a well-crafted system prompt (that explicitly instructs the LLM to only use provided context) for the best results.</p>
+
+<hr />
+<p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</div></body></html>

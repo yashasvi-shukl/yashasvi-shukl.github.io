@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta name="post-tag"   content="RAG" />
+<meta name="post-title" content="Query Expansion and Multi-Query: Getting More From Your Retriever" />
+<meta name="post-date"  content="Dec 28, 2024" />
+<meta name="post-read"  content="7 min" />
+</head><body><div class="post-content">
+
+<blockquote><p><strong>The problem:</strong> users rarely phrase their question the way the relevant document was written. Query expansion bridges that gap before retrieval even starts.</p></blockquote>
+
+<h2>Why a Single Query Isn't Enough</h2>
+<p>You've built a great retrieval system. Your embeddings are good. Your vector store is fast. And yet, occasionally your RAG system misses obvious answers. The document is <em>right there</em> in the index, but the retriever didn't surface it.</p>
+<p>The culprit is usually a vocabulary mismatch between the user's query and the document's language. A user asks: <em>"What should I do if the landing gear fails to retract?"</em>. The relevant manual section is titled: <em>"Non-standard retraction of the main undercarriage — troubleshooting procedure"</em>. Same concept. Different words. Without query expansion, the embedding distance between these might not be small enough to rank in the top-k.</p>
+<p>Query expansion is the practice of generating alternative formulations of the user's query before (or alongside) retrieval, then merging the results.</p>
+
+<h2>Multi-Query Generation</h2>
+<p>The simplest and most effective form of query expansion: ask an LLM to rewrite the query from multiple perspectives.</p>
+
+<pre><code class="language-python">MULTI_QUERY_PROMPT = """You are an expert at reformulating search queries to improve document retrieval.
+
+Given a user question, generate {n} alternative versions that:
+- Use different vocabulary and phrasing
+- Approach the question from different angles
+- Maintain the same core information need
+
+Original question: {question}
+
+Output ONLY the alternative questions, one per line. No numbering, no explanation."""
+
+async def generate_multi_queries(question: str, n: int = 3) -> list[str]:
+    response = await llm.ainvoke(
+        MULTI_QUERY_PROMPT.format(question=question, n=n)
+    )
+    alternatives = [q.strip() for q in response.content.strip().split('\n') if q.strip()]
+    return [question] + alternatives  # include original
+
+# Example output for "What causes engine oil pressure to drop?"
+# → "What are the reasons for low engine oil pressure?"
+# → "Engine oil pressure warning light — possible causes and diagnosis"
+# → "How to troubleshoot falling oil pressure in aircraft engines"
+</code></pre>
+
+<p>Each alternative query is then embedded and searched independently. Results from all queries are merged and deduplicated, usually via Reciprocal Rank Fusion.</p>
+
+<h2>Hypothetical Document Embeddings (HyDE)</h2>
+<p>HyDE flips the model: instead of expanding the query, you use the LLM to generate a <em>hypothetical answer</em> to the question, then embed that hypothetical answer and use it as the search vector.</p>
+<p>The intuition is that a hypothetical answer — even if factually wrong — will be written in language closer to how actual documents are written, making it a better retrieval vector than the raw question.</p>
+
+<pre><code class="language-python">HYDE_PROMPT = """Write a detailed, technical answer to the following question.
+Your answer should be written in the same style as a technical manual or documentation.
+It may not be factually correct — it just needs to be plausible and written in document-like language.
+
+Question: {question}
+
+Answer (2-3 paragraphs):"""
+
+async def hyde_retrieve(question: str, vector_store, top_k: int = 10):
+    # Generate hypothetical document
+    hyp_response = await llm.ainvoke(HYDE_PROMPT.format(question=question))
+    hypothetical_doc = hyp_response.content
+
+    # Embed the hypothetical document
+    hyp_embedding = embedding_model.embed_query(hypothetical_doc)
+
+    # Search using the hypothetical embedding
+    results = vector_store.similarity_search_by_vector(hyp_embedding, k=top_k)
+    return results
+</code></pre>
+
+<p>HyDE is especially effective for technical domains where user questions are informal but documents are formal. The transformation from question-language to document-language is where a lot of retrieval failures hide.</p>
+
+<h2>Query Enhancement — Cleaning Before Expanding</h2>
+<p>Before expanding, it's worth cleaning. Real user queries in enterprise settings often contain:</p>
+<ul>
+  <li>Typos and misspellings</li>
+  <li>Domain abbreviations ("MEL" for Minimum Equipment List, "AOG" for Aircraft on Ground)</li>
+  <li>Grammatically incomplete fragments</li>
+  <li>Informal phrasing that's technically ambiguous</li>
+</ul>
+
+<pre><code class="language-python">QUERY_ENHANCEMENT_PROMPT = """Clean and enhance the following search query for a technical documentation system.
+
+1. Fix spelling errors
+2. Expand known abbreviations: {abbreviations_json}
+3. Make the query grammatically complete
+4. Do not change the meaning or add new information
+
+Original query: {query}
+
+Return ONLY the enhanced query, nothing else."""
+
+# Abbreviations were extracted once using LLM over all documents
+# and stored in a JSON file
+import json
+with open("abbreviations.json") as f:
+    abbrevs = json.load(f)
+
+async def enhance_query(query: str) -> str:
+    response = await llm.ainvoke(
+        QUERY_ENHANCEMENT_PROMPT.format(
+            query=query,
+            abbreviations_json=json.dumps(abbrevs, indent=2)
+        )
+    )
+    return response.content.strip()
+</code></pre>
+
+<h2>Putting It Together — The Full Query Pipeline</h2>
+<pre><code class="language-python">async def full_query_pipeline(raw_query: str, vector_store) -> list:
+    # Step 1: Clean and enhance
+    enhanced_query = await enhance_query(raw_query)
+
+    # Step 2: Generate alternative perspectives
+    all_queries = await generate_multi_queries(enhanced_query, n=3)
+
+    # Step 3: Retrieve for each query concurrently
+    import asyncio
+    retrieval_tasks = [
+        vector_store.asimilarity_search(q, k=15)
+        for q in all_queries
+    ]
+    all_results = await asyncio.gather(*retrieval_tasks)
+
+    # Step 4: Merge via RRF
+    ranked = reciprocal_rank_fusion(all_results)
+
+    # Return top 20 unique documents
+    return ranked[:20]
+</code></pre>
+
+<p>The concurrency is important. Running 4 queries sequentially adds 4× the retrieval latency. Running them concurrently costs almost the same as a single query.</p>
+
+<h2>Tradeoffs and When to Use Each Technique</h2>
+<table>
+  <thead><tr><th>Technique</th><th>Latency Cost</th><th>Best For</th><th>Avoid When</th></tr></thead>
+  <tbody>
+    <tr><td>Query cleaning</td><td>~Low (+1 LLM call)</td><td>Always worth it</td><td>—</td></tr>
+    <tr><td>Multi-query (×3)</td><td>Medium (+retrieval×3)</td><td>Vocabulary mismatch likely</td><td>Tight latency budgets</td></tr>
+    <tr><td>HyDE</td><td>Medium (+1 LLM + retrieval)</td><td>Informal → formal domain</td><td>Short factual queries</td></tr>
+    <tr><td>Multi-query + HyDE</td><td>Higher</td><td>Maximum recall</td><td>Real-time responses</td></tr>
+  </tbody>
+</table>
+
+<p>In high-stakes RAG (where a missed document is costly), the latency overhead of multi-query + HyDE is almost always worth it. In conversational interfaces where users expect &lt;1s responses, query cleaning alone gives you most of the benefit at a fraction of the cost.</p>
+
+<hr />
+<p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</div></body></html>

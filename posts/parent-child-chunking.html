@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Parent-Child Chunking: The RAG Pattern Nobody Talks About Enough</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    :root {
+      --ink: #0f0d0a;
+      --parchment: #faf8f3;
+      --cream: #f4f0e8;
+      --gold: #c9a84c;
+      --gold-light: #e8d49a;
+      --rust: #b84a2e;
+      --teal: #1a6b6b;
+      --teal-light: #e8f4f4;
+      --muted: #6b6460;
+      --border: #ddd8ce;
+      --code-bg: #1a1814;
+      --code-text: #e8d49a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background-color: var(--parchment);
+      color: var(--ink);
+      line-height: 1.85;
+      font-size: 19px;
+    }
+    header {
+      background: var(--ink);
+      color: var(--parchment);
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .header-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      min-height: 480px;
+    }
+    .header-text {
+      padding: 64px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      z-index: 2;
+      text-align: center;
+    }
+    .header-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      line-height: 1.08;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 24px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 em { color: var(--gold); font-style: italic; }
+    .header-sub {
+      font-size: 18px;
+      color: #c8c0b0;
+      line-height: 1.6;
+      max-width: 600px;
+      font-weight: 300;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .header-meta {
+      margin-top: 36px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-meta .chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 2px;
+    }
+    .header-meta .read-time { font-size: 13px; color: #888; }
+    .content-wrap { max-width: 800px; margin: 0 auto; padding: 72px 40px 120px; }
+    .content-wrap h2 {
+      font-family: 'Playfair Display', serif; font-size: 38px; font-weight: 700;
+      line-height: 1.15; letter-spacing: -.5px; color: var(--ink);
+      position: relative; margin-top: 72px; margin-bottom: 32px;
+    }
+    .content-wrap h2::after { content: ''; display: block; width: 48px; height: 3px; background: var(--gold); margin-top: 14px; }
+    .content-wrap h3 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; margin-top: 48px; margin-bottom: 16px; color: var(--ink); }
+    .content-wrap h4 { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--teal); margin-top: 32px; margin-bottom: 12px; }
+    .content-wrap p { margin-bottom: 24px; }
+    .content-wrap a { color: var(--teal); text-decoration: none; }
+    .content-wrap a:hover { color: var(--rust); }
+    .content-wrap strong, .content-wrap b { color: var(--ink); font-weight: 600; }
+    .content-wrap em, .content-wrap i { font-style: italic; }
+    .content-wrap ul, .content-wrap ol { padding-left: 28px; margin: 24px 0; }
+    .content-wrap li { line-height: 1.8; margin-bottom: 12px; }
+    .content-wrap li::marker { color: var(--gold); }
+    .content-wrap blockquote { border-left: 4px solid var(--gold); padding-left: 28px; margin: 36px 0; font-size: 22px; line-height: 1.7; color: #2a2420; font-style: italic; font-weight: 300; }
+    .content-wrap blockquote p { margin-bottom: 0; }
+    .content-wrap pre { background: var(--code-bg); color: var(--code-text); font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.65; padding: 28px 32px; border-radius: 6px; overflow-x: auto; margin: 32px 0; position: relative; }
+    .content-wrap code { font-family: 'JetBrains Mono', monospace; font-size: 14px; background: #ede8df; padding: 2px 7px; border-radius: 3px; color: var(--rust); }
+    .content-wrap pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+    .content-wrap .callout { background: var(--cream); border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 0 4px 4px 0; padding: 24px 28px; margin: 36px 0; }
+    .content-wrap .callout p { margin-bottom: 0; font-size: 17px; }
+    .content-wrap .callout strong { font-weight: bold; color: var(--teal); }
+    .content-wrap .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); margin: 2.2rem 0; }
+    .content-wrap .metric-box { background: var(--parchment); padding: 1.4rem; text-align: center; }
+    .content-wrap .metric-val { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--teal); line-height: 1; }
+    .content-wrap .metric-lbl { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-top: 0.4rem; }
+    footer { background: var(--ink); color: #888; padding: 48px 80px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+    footer a { color: var(--gold); text-decoration: none; }
+    @media (max-width: 860px) { .header-text { padding: 48px 32px; } h1 { font-size: 40px; } .content-wrap { padding: 48px 24px; } footer { padding: 32px 24px; flex-direction: column; align-items: flex-start; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-grid">
+    <div class="header-text">
+      <div class="header-eyebrow">RAG · Feb 18, 2025</div>
+      <h1>Parent-Child Chunking: The RAG Pattern Nobody Talks About <em>Enough</em></h1>
+      <p class="header-sub">Standard chunking breaks context. Parent-child chunking preserves it — giving you retrieval precision and generation context at the same time.</p>
+      <div class="header-meta">
+        <span class="chip">RAG</span>
+        <span class="read-time">~ 7 min read</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="content-wrap">
+    <blockquote><p><strong>Core idea:</strong> index small chunks for retrieval precision, but answer with their full parent context. Two stores, one query, dramatically better results.</p></blockquote>
+
+    <div class="metrics">
+      <div class="metric-box"><div class="metric-val">↑ Recall</div><div class="metric-lbl">Better retrieval</div></div>
+      <div class="metric-box"><div class="metric-val">↑ Context</div><div class="metric-lbl">Richer answers</div></div>
+      <div class="metric-box"><div class="metric-val">↓ Halluc.</div><div class="metric-lbl">Less guessing</div></div>
+      <div class="metric-box"><div class="metric-val">2×</div><div class="metric-lbl">Index layers</div></div>
+    </div>
+
+    <hr />
+
+    <h2>The Problem with Standard Chunking</h2>
+    <p>Every RAG tutorial follows the same recipe: split your document into chunks of ~512 tokens, embed them, push them into a vector store, retrieve top-k at query time. Clean. Simple. It works — until you're dealing with real documents that have real structure.</p>
+    <p>The fundamental tension in RAG chunking is this: <strong>small chunks win at retrieval</strong> (tight, focused semantic signal) but <strong>large chunks win at generation</strong> (the LLM needs enough context to actually answer). Standard fixed-size chunking forces you to pick a compromise that's suboptimal at both ends.</p>
+    <p>Split too small and you retrieve fragments — a sentence that's meaningless without the surrounding paragraph. Split too large and your embedding space gets diluted — a thousand-token chunk contains too many concepts for a single vector to represent faithfully.</p>
+    <p>Parent-child chunking is the pattern that dissolves this tradeoff.</p>
+
+    <h2>The Architecture</h2>
+    <h3>Step 1 — Build parent chunks at structural boundaries</h3>
+    <p>The first pass splits the document at natural structural seams: headings, sections, subsections. These become your <strong>parent chunks</strong>. They're large — potentially several thousand tokens — and represent a complete, coherent unit of thought in the document.</p>
+    <p>Parent chunks are <em>not embedded</em>. They live in a regular document store: MongoDB, SQLite, a JSON file on disk, or any key-value store. They're indexed by a parent ID.</p>
+
+    <h3>Step 2 — Build child chunks from each parent</h3>
+    <p>Each parent chunk is then split further into smaller, roughly equal-sized child chunks (~200–400 tokens each). Every child stores two things: its own text, and a <code>parent_id</code> reference pointing back to its parent.</p>
+    <p>Children are what you embed and index in your vector store (Milvus, ChromaDB, Pinecone, etc.).</p>
+
+    <h3>Step 3 — Retrieve children, serve parents</h3>
+    <p>At query time: run your semantic search against the child index. Collect the top-k child chunks. Look up their <code>parent_id</code> values. Fetch the corresponding parent chunks from your document store. Deduplicate. Pass the full parent chunks to the LLM.</p>
+    <p>The retriever got precision. The LLM gets context. Neither had to compromise.</p>
+
+    <div class="callout"><p><strong>💡 Key insight:</strong> retrieval and generation have genuinely different optimal chunk sizes. Parent-child chunking decouples those two concerns so you can optimise both independently.</p></div>
+
+    <h2>Implementation</h2>
+    <pre><code class="language-python">from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+    # 1. Parse document into section-level parent chunks
+    parent_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000,
+        chunk_overlap=100,
+        separators=["\n## ", "\n### ", "\n\n", "\n"]
+    )
+    parent_chunks = parent_splitter.create_documents([full_text])
+
+    # 2. Split each parent into small children
+    child_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=300,
+        chunk_overlap=30
+    )
+
+    child_chunks = []
+    for i, parent in enumerate(parent_chunks):
+        children = child_splitter.create_documents([parent.page_content])
+        for child in children:
+            child.metadata = {
+                **parent.metadata,
+                "parent_id": i,           # ← link to parent
+                "parent_preview": parent.page_content[:120]
+            }
+            child_chunks.append(child)
+
+    # 3. Embed and index child chunks only
+    vector_store.add_documents(child_chunks)
+
+    # 4. Store parent chunks separately
+    for i, parent in enumerate(parent_chunks):
+        doc_store.set(str(i), parent.page_content)
+
+    # ── At retrieval time ──────────────────────────────────
+    def retrieve_with_parent_context(query: str, top_k: int = 20):
+        # Retrieve relevant child chunks
+        child_hits = vector_store.similarity_search(query, k=top_k)
+
+        # Collect unique parent IDs
+        parent_ids = list({hit.metadata["parent_id"] for hit in child_hits})
+
+        # Fetch full parent chunks
+        context_docs = [doc_store.get(str(pid)) for pid in parent_ids]
+        return context_docs
+    </code></pre>
+
+    <h2>When to Use It — And When Not To</h2>
+    <p><strong>Use parent-child chunking when:</strong></p>
+    <ul>
+      <li>Your documents have rich structure — manuals, legal contracts, research papers, internal wikis</li>
+      <li>Tables or diagrams appear mid-section (a single row means nothing without the surrounding context)</li>
+      <li>Section titles carry semantic weight that shouldn't be lost during retrieval</li>
+      <li>Users ask questions that span multiple sentences or concepts within a section</li>
+    </ul>
+    <p><strong>Skip it when:</strong></p>
+    <ul>
+      <li>Documents are short and atomic — FAQ entries, product descriptions, support tickets</li>
+      <li>Every chunk is already a self-contained unit of meaning</li>
+      <li>You're latency-constrained and can't afford two storage lookups</li>
+    </ul>
+
+    <h2>Common Pitfalls</h2>
+    <h3>Forgetting to deduplicate</h3>
+    <p>Multiple child chunks often share the same parent. If you retrieve five children all pointing to the same parent ID and blindly fetch the parent five times, you'll stuff the same 2,000-token section into your context window five times. Always deduplicate parent IDs before fetching.</p>
+
+    <h3>Unbounded parent size</h3>
+    <p>If your "structural boundary" splitting produces parents of 8,000+ tokens, you'll blow through your context window the moment you retrieve more than one or two. Cap parent chunk size — 1,500 to 3,000 tokens is usually a safe range — or use a sliding window approach where very large sections are split into overlapping parents.</p>
+
+    <h3>Metadata orphaning</h3>
+    <p>Child chunks need to inherit their parent's metadata: source document, page number, section title, creation date. If a child chunk only stores <code>parent_id</code> and nothing else, your citations and filtering capabilities break. Always propagate metadata down during the split step.</p>
+
+    <h3>Skipping the re-ranker</h3>
+    <p>Parent-child retrieval tends to pull back large chunks. Running a cross-encoder re-ranker on the child results before fetching parents helps you avoid pulling in irrelevant parent sections just because a tangentially-related child happened to score well.</p>
+
+    <h2>Extending the Pattern</h2>
+    <p>The parent-child idea extends naturally. You can build <strong>three-level hierarchies</strong>: document → section (parent) → paragraph (child). The document level stores author, date, and source. The section level stores the coherent argument. The paragraph level is what gets embedded. At retrieval time you might serve the section or even the full document depending on the query type.</p>
+    <p>This is essentially what systems like <strong>LlamaIndex's ParentDocumentRetriever</strong> implement under the hood — it's worth reading their source code once you've built a version yourself.</p>
+
+    <hr />
+    <p><em>Questions or thoughts? <a href="../index.html#contact">Drop me a message →</a></em></p>
+</main>
+
+<footer>
+  <div>
+    <div style="font-family:'Playfair Display',serif; font-size:20px; color:var(--gold); margin-bottom:6px;">Parent-Child Chunking</div>
+    <div>A RAG deep-dive.</div>
+  </div>
+  <div style="text-align:right;">
+    <div><a href="../index.html">Home</a> · <a href="../blog.html">Blog</a></div>
+    <div style="margin-top:4px;">Yashasvi Shukla</div>
+  </div>
+</footer>
+
+<script>
+  // Initialize highlight.js
+  document.addEventListener('DOMContentLoaded', (event) => {
+    document.querySelectorAll('pre code').forEach((el) => {
+      hljs.highlightElement(el);
+    });
+  });
+</script>
+
+</body>
+</html>

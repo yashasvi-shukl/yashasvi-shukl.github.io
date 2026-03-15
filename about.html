@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — Loading…</title>
+  <meta name="description" content="" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ── PROFILE HERO ──────────────────────────────────── */
+    .profile-hero {
+      padding-top: var(--nav-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .profile-inner {
+      max-width: var(--max-w); margin: 0 auto;
+      padding: 0 var(--px);
+      display: grid; grid-template-columns: 320px 1fr;
+    }
+    .profile-photo-col {
+      position: relative; overflow: hidden;
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      min-height: 420px;
+    }
+    .profile-photo-col img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center top;
+      filter: grayscale(12%) contrast(1.06);
+    }
+    .profile-photo-ph {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem; color: var(--muted);
+      text-align: center; padding: 2rem;
+    }
+    .profile-photo-ph .ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 2px dashed var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+    }
+    .profile-photo-ph p {
+      font-family: var(--ff-mono); font-size: 0.64rem;
+      letter-spacing: 0.06em; opacity: 0.5; line-height: 1.8;
+    }
+
+    .profile-info {
+      padding: 4.5rem 4rem 4rem;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .profile-name {
+      font-family: var(--ff-display); font-weight: 900;
+      font-size: clamp(2.8rem, 5vw, 5.2rem);
+      line-height: 0.9; letter-spacing: -0.03em;
+      color: var(--cream); margin-bottom: 1rem;
+    }
+    .profile-name span { display: block; color: transparent; -webkit-text-stroke: 1.5px var(--amber); }
+    .profile-role {
+      font-family: var(--ff-mono); font-size: 0.78rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--amber); margin-bottom: 2rem;
+      display: flex; align-items: center; gap: 0.65rem;
+    }
+    .profile-role::before { content: ''; width: 22px; height: 1.5px; background: var(--amber); }
+    .profile-bio { margin-bottom: 2.5rem; }
+    .profile-bio p {
+      font-size: 1rem; line-height: 1.85; color: var(--ink);
+      margin-bottom: 1rem;
+    }
+    .profile-bio p strong { color: var(--cream); font-weight: 500; }
+    .profile-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    /* ── TABS ──────────────────────────────────────────── */
+    .tabs-bar {
+      position: sticky; top: var(--nav-h); z-index: 200;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .tabs-inner {
+      max-width: var(--max-w); margin: 0 auto;
+      padding: 0 var(--px);
+      display: flex; overflow-x: auto; scrollbar-width: none;
+    }
+    .tabs-inner::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      font-family: var(--ff-mono); font-size: 0.72rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      padding: 1.1rem 1.6rem;
+      background: none; border: none; border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--cream); }
+    .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── EXPERIENCE PANEL ──────────────────────────────── */
+    #panel-experience { background: var(--bg); }
+    .exp-layout {
+      max-width: var(--max-w); margin: 0 auto;
+      padding: 5.5rem var(--px);
+      display: grid; grid-template-columns: 1fr 360px; gap: 5rem;
+    }
+
+    /* Timeline */
+    .tl-item {
+      display: grid; grid-template-columns: 52px 1fr;
+      gap: 0 1rem; margin-bottom: 3.2rem;
+    }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-gutter { display: flex; flex-direction: column; align-items: center; }
+    .tl-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--surface); border: 2px solid var(--border);
+      flex-shrink: 0; margin-top: 4px;
+    }
+    .tl-item.current .tl-dot {
+      background: var(--amber); border-color: var(--amber);
+      box-shadow: 0 0 0 5px rgba(245,166,35,.15);
+    }
+    .tl-line { width: 1px; flex: 1; background: var(--border); margin-top: 6px; min-height: 2rem; }
+    .tl-body { padding-bottom: 1.5rem; }
+    .tl-role { font-family: var(--ff-display); font-size: 1.15rem; font-weight: 700; color: var(--cream); }
+    .tl-badge {
+      display: inline-block; font-family: var(--ff-mono); font-size: 0.58rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--amber); color: var(--bg);
+      padding: 0.14rem 0.52rem; margin-left: 0.6rem; vertical-align: middle;
+    }
+    .tl-company { font-size: 0.88rem; color: var(--amber); margin: 0.25rem 0; }
+    .tl-period  { font-family: var(--ff-mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 0.06em; margin-bottom: 0.65rem; }
+    .tl-desc    { font-size: 0.9rem; line-height: 1.72; color: var(--ink-dim); }
+
+    /* Sidebar */
+    .sb-label {
+      font-family: var(--ff-mono); font-size: 0.62rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--muted);
+      display: block; margin-bottom: 1.1rem;
+    }
+    .sidebar-block { margin-bottom: 3rem; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+    .stat-box { background: var(--surface); padding: 1.4rem 1.2rem; transition: background 0.2s; }
+    .stat-box:hover { background: var(--amber-dim); }
+    .stat-box-val { font-family: var(--ff-display); font-size: 2.4rem; font-weight: 900; color: var(--amber); line-height: 1; letter-spacing: -0.04em; }
+    .stat-box-lbl { font-family: var(--ff-mono); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-top: 0.4rem; }
+
+    .edu-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .edu-card { border: 1px solid var(--border); padding: 1.2rem 1.4rem; background: var(--surface); transition: border-color 0.2s; }
+    .edu-card:hover { border-color: rgba(245,166,35,.3); }
+    .edu-degree { font-family: var(--ff-display); font-size: 0.97rem; font-weight: 700; color: var(--cream); }
+    .edu-school { font-size: 0.82rem; color: var(--amber); margin: 0.2rem 0; }
+    .edu-meta   { font-family: var(--ff-mono); font-size: 0.63rem; color: var(--muted); letter-spacing: 0.05em; }
+
+    .awards-list { border: 1px solid var(--border); }
+    .award-row { display: flex; align-items: center; gap: 1rem; padding: 0.95rem 1.2rem; border-bottom: 1px solid var(--border); transition: background 0.2s; }
+    .award-row:last-child { border-bottom: none; }
+    .award-row:hover { background: var(--surface2); }
+    .award-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .award-name { font-size: 0.87rem; font-weight: 500; color: var(--cream); }
+    .award-org  { font-family: var(--ff-mono); font-size: 0.63rem; color: var(--muted); letter-spacing: 0.04em; margin-top: 0.12rem; }
+
+    /* ── SKILLS PANEL ──────────────────────────────────── */
+    #panel-skills { background: var(--bg); }
+    .skills-inner { max-width: var(--max-w); margin: 0 auto; padding: 5.5rem var(--px); }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .skill-card {
+      background: var(--surface); border: 1px solid var(--border); padding: 2rem;
+      transition: border-color 0.25s, transform 0.3s cubic-bezier(.2,0,.1,1);
+    }
+    .skill-card:hover { border-color: rgba(245,166,35,.3); transform: translateY(-3px); }
+    .skill-cat-title {
+      font-family: var(--ff-mono); font-size: 0.65rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--amber);
+      margin-bottom: 1.2rem; padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.38rem; }
+    .chip {
+      font-family: var(--ff-mono); font-size: 0.67rem; letter-spacing: 0.04em;
+      padding: 0.28rem 0.65rem; border: 1px solid var(--border); color: var(--ink-dim);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .chip:hover { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+
+    /* ── CONTACT PANEL ─────────────────────────────────── */
+    #panel-contact { background: var(--surface); }
+    .contact-inner { max-width: var(--max-w); margin: 0 auto; padding: 5.5rem var(--px); }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; }
+    .contact-intro {
+      font-family: var(--ff-display); font-style: italic;
+      font-size: clamp(1.2rem, 2vw, 1.65rem); line-height: 1.55;
+      color: var(--ink-dim); margin-bottom: 2.5rem;
+    }
+    .contact-links { display: flex; flex-direction: column; gap: 0.5rem; }
+    .clink {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1rem 1.3rem; border: 1px solid var(--border);
+      font-family: var(--ff-mono); font-size: 0.73rem; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--muted);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .clink:hover { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+    .clink-icon { color: var(--amber); flex-shrink: 0; }
+    .contact-avail {
+      font-family: var(--ff-mono); font-size: 0.63rem; letter-spacing: 0.07em;
+      color: var(--muted); margin-top: 1.5rem; line-height: 1.9;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .profile-inner { grid-template-columns: 1fr; }
+      .profile-photo-col { min-height: 50vw; }
+      .profile-info { padding: 3rem 2rem; }
+      .exp-layout { grid-template-columns: 1fr; gap: 3rem; }
+      .skills-grid { grid-template-columns: 1fr 1fr; }
+      .contact-grid { grid-template-columns: 1fr; gap: 3rem; }
+    }
+    @media (max-width: 640px) {
+      .skills-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="page-entering">
+  <div id="cursor"></div>
+  <nav id="site-nav"></nav>
+
+  <!-- PROFILE HERO -->
+  <div class="profile-hero">
+    <div class="profile-inner">
+      <div class="profile-photo-col">
+        <img id="profile-img" src="" alt="" />
+        <div class="profile-photo-ph" id="profile-ph" style="display:none">
+          <div class="ring">🖼</div>
+          <p>Drop <code>photo.jpg</code><br/>in the site root</p>
+        </div>
+      </div>
+      <div class="profile-info">
+        <h1 class="profile-name r"  id="profile-name"></h1>
+        <p  class="profile-role r d1" id="profile-role"></p>
+        <div class="profile-bio  r d2" id="profile-bio"></div>
+        <div class="profile-actions r d3" id="profile-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-bar">
+    <div class="tabs-inner">
+      <button class="tab-btn active" data-tab="experience">Experience</button>
+      <button class="tab-btn"        data-tab="skills">Skills</button>
+      <button class="tab-btn"        data-tab="contact">Contact</button>
+    </div>
+  </div>
+
+  <!-- EXPERIENCE -->
+  <div class="tab-panel active" id="panel-experience">
+    <div class="exp-layout">
+      <div>
+        <span class="section-eyebrow r">Work History</span>
+        <h2 class="section-title r d1">Where I've <em>Worked</em></h2>
+        <div id="exp-timeline"></div>
+      </div>
+      <div>
+        <div class="sidebar-block r">
+          <span class="sb-label">By the numbers</span>
+          <div class="stats-grid" id="stats-sidebar"></div>
+        </div>
+        <div class="sidebar-block r d1">
+          <span class="sb-label">Education</span>
+          <div class="edu-list" id="edu-list"></div>
+        </div>
+        <div class="sidebar-block r d2">
+          <span class="sb-label">Awards & Recognition</span>
+          <div class="awards-list" id="awards-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SKILLS -->
+  <div class="tab-panel" id="panel-skills">
+    <div class="skills-inner">
+      <span class="section-eyebrow r">Technical Stack</span>
+      <h2 class="section-title r d1">Skills & <em>Technologies</em></h2>
+      <div class="skills-grid" id="skills-grid"></div>
+    </div>
+  </div>
+
+  <!-- CONTACT -->
+  <div class="tab-panel" id="panel-contact">
+    <div class="contact-inner">
+      <span class="section-eyebrow r">Get In Touch</span>
+      <h2 class="section-title r d1">Say <em>Hello</em></h2>
+      <div class="contact-grid">
+        <div class="r d1">
+          <p class="contact-intro" id="contact-intro"></p>
+          <div class="contact-links" id="contact-links"></div>
+          <p class="contact-avail"  id="contact-avail"></p>
+        </div>
+        <div class="r d2">
+          <form class="form" id="contact-form">
+            <div class="form-row">
+              <div class="field">
+                <label>Name</label>
+                <input type="text" name="name" placeholder="Your name" required />
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input type="email" name="email" placeholder="your@email.com" required />
+              </div>
+            </div>
+            <div class="field">
+              <label>Subject</label>
+              <input type="text" name="subject" placeholder="What's this about?" />
+            </div>
+            <div class="field">
+              <label>Message</label>
+              <textarea name="message" placeholder="Tell me more…" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="form-btn">
+              Send Message →
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script type="module">
+    import {
+      getConfig, renderNav, renderFooter,
+      initCursor, attachHover, watchReveal, initTransitions,
+      setFavicon, setOGMeta
+    } from './site.js';
+
+    async function boot() {
+      try {
+        const cfg = await getConfig();
+        const { personal: p, meta: m } = cfg;
+
+        document.title = `About — ${p.name}`;
+        document.querySelector('meta[name="description"]').content = m.description;
+        setFavicon(m.faviconEmoji);
+        setOGMeta(cfg, `About — ${p.name}`, m.description);
+        renderNav(cfg, 'about');
+        renderFooter(cfg);
+        initCursor();
+        initTransitions();
+
+        // Profile
+        const img = document.getElementById('profile-img');
+        img.src = p.photo; img.alt = p.name;
+        img.onerror = () => { img.style.display='none'; document.getElementById('profile-ph').style.display='flex'; };
+
+        const [first, ...rest] = p.name.split(' ');
+        document.getElementById('profile-name').innerHTML = `${first}<span>${rest.join(' ')}</span>`;
+        document.getElementById('profile-role').textContent = p.role;
+        document.getElementById('profile-bio').innerHTML = cfg.about.bio.map(b => `<p>${b}</p>`).join('');
+        document.getElementById('profile-actions').innerHTML = `
+          <a href="mailto:${p.email}" class="btn btn-primary">Email Me →</a>
+          <a href="${p.linkedin}" target="_blank" rel="noopener" class="btn btn-outline">LinkedIn ↗</a>
+          <a href="${p.github}"   target="_blank" rel="noopener" class="btn btn-outline">GitHub ↗</a>
+          ${p.resumePdf ? `<a href="${p.resumePdf}" download class="btn btn-outline">Download CV ↓</a>` : ''}`;
+
+        // Timeline
+        document.getElementById('exp-timeline').innerHTML =
+          cfg.experience.map((e, i) => `
+            <div class="tl-item${e.current ? ' current' : ''} r" style="transition-delay:${i*.1}s">
+              <div class="tl-gutter">
+                <div class="tl-dot"></div>
+                ${i < cfg.experience.length - 1 ? '<div class="tl-line"></div>' : ''}
+              </div>
+              <div class="tl-body">
+                <div class="tl-role">
+                  ${e.role}
+                  ${e.current ? '<span class="tl-badge">Current</span>' : ''}
+                </div>
+                <div class="tl-company">${e.company}</div>
+                <div class="tl-period">${e.period}</div>
+                <div class="tl-desc">${e.description}</div>
+              </div>
+            </div>`).join('');
+
+        // Stats sidebar
+        document.getElementById('stats-sidebar').innerHTML =
+          cfg.stats.map(s => `
+            <div class="stat-box">
+              <div class="stat-box-val">${s.value}</div>
+              <div class="stat-box-lbl">${s.label}</div>
+            </div>`).join('');
+
+        // Education
+        document.getElementById('edu-list').innerHTML =
+          cfg.education.map(e => `
+            <div class="edu-card">
+              <div class="edu-degree">${e.degree}</div>
+              <div class="edu-school">${e.school}</div>
+              <div class="edu-meta">${e.period} · ${e.note}</div>
+            </div>`).join('');
+
+        // Awards
+        document.getElementById('awards-list').innerHTML =
+          cfg.awards.map(a => `
+            <div class="award-row">
+              <span class="award-icon">${a.icon}</span>
+              <div>
+                <div class="award-name">${a.name}</div>
+                <div class="award-org">${a.org}</div>
+              </div>
+            </div>`).join('');
+
+        // Skills grid
+        document.getElementById('skills-grid').innerHTML =
+          cfg.skills.map((cat, i) => `
+            <div class="skill-card r" style="transition-delay:${i*.06}s">
+              <div class="skill-cat-title">${cat.category}</div>
+              <div class="chips">
+                ${cat.items.map(item => `<span class="chip">${item}</span>`).join('')}
+              </div>
+            </div>`).join('');
+
+        // Contact
+        document.getElementById('contact-intro').textContent = cfg.contact.intro;
+        document.getElementById('contact-links').innerHTML = [
+          { icon: '✉',  label: p.email,     href: `mailto:${p.email}` },
+          { icon: 'in', label: 'LinkedIn',   href: p.linkedin },
+          { icon: '⌥',  label: 'GitHub',     href: p.github   },
+          { icon: '✍',  label: 'Medium',     href: p.medium   },
+        ].map(l => `
+          <a href="${l.href}" target="_blank" rel="noopener" class="clink">
+            <span class="clink-icon">${l.icon}</span>${l.label}
+          </a>`).join('');
+        document.getElementById('contact-avail').textContent = cfg.contact.availability;
+
+        // Contact form — Formspree or fallback
+        const form = document.getElementById('contact-form');
+        const endpoint = cfg.contact.formspreeEndpoint;
+        if (endpoint) form.setAttribute('action', endpoint);
+
+        form.addEventListener('submit', async e => {
+          e.preventDefault();
+          const btn = document.getElementById('form-btn');
+          btn.textContent = 'Sending…'; btn.disabled = true;
+          try {
+            if (endpoint) {
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { Accept: 'application/json' }
+              });
+              if (!res.ok) throw new Error();
+            }
+            btn.textContent = "Sent ✓  I'll be in touch";
+            form.reset();
+          } catch {
+            btn.textContent = 'Error — try emailing directly';
+          }
+          btn.disabled = false;
+          setTimeout(() => { btn.textContent = 'Send Message →'; }, 5000);
+        });
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`panel-${btn.dataset.tab}`).classList.add('active');
+            watchReveal();
+          });
+          attachHover(btn);
+        });
+
+        document.querySelectorAll('.chip, .clink, a, button').forEach(attachHover);
+        watchReveal();
+
+      } catch (err) { console.error(err); }
+    }
+    boot();
+  </script>
+</body>
+</html>
